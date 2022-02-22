@@ -21,9 +21,6 @@ from analysis.analysis import analyse_subject
 
 def preprocess_single_subject_out(
     df_eye_fixations_to_elements,
-    df_question_views,
-    df_words,
-    path,
     subject_id,
     dataset_dir,
     baseline
@@ -43,26 +40,6 @@ def preprocess_single_subject_out(
     :param baseline: Wether baseline dataset to be processed
     :type baseline: bool
     """
-    if baseline:
-        df_eye_fixations_to_elements.to_csv(
-            f"{path}/{subject_id}_images_with_fixations_and_elems.csv",
-            index=False)
-        df_question_views.to_csv(
-            f"{path}/{subject_id}_quetions_answers.csv",
-            index=False)
-        df_words.to_csv(
-            f"{path}/{subject_id}_words_views.csv",
-            index=False)
-    else:
-        df_eye_fixations_to_elements.to_csv(
-            f"{path}/{subject_id}_images_with_fixations_and_elems.csv",
-            index=False)
-        df_question_views.to_csv(
-            f"{path}/{subject_id}_quetions_answers.csv",
-            index=False)
-        df_words.to_csv(
-            f"{path}/{subject_id}_words_views.csv",
-            index=False)
     write_csv_fixations_by_vis_for_subject(
         subject_id, dataset_dir,  df_eye_fixations_to_elements, baseline)
     write_csv_fixations_by_strings(
@@ -133,7 +110,7 @@ def preprocess_all(
         assert(len(debugout) == 1)
         debugout_file = debugout[0]
 
-        df_eye_fixations_to_elements, df_question_views, user_data, df_words\
+        df_eye_fixations_to_elements, df_question_views, user_data\
             = preprocess_subject(
                 group, df_element_labels, asc_file, debugout_file,
                 experiment_desc, experiment_desc_html, dataset_dir, time_unix,
@@ -144,9 +121,6 @@ def preprocess_all(
 
         preprocess_single_subject_out(
             df_eye_fixations_to_elements,
-            df_question_views,
-            df_words,
-            path,
             subject_id,
             dataset_dir,
             baseline

@@ -98,10 +98,6 @@ def preprocess_subject(
     experiment_group = json.load(json_file)
     json_file.close()
 
-    json_file = open(experiment_desc_html_json)
-    experiment_group_html = json.load(json_file)
-    json_file.close()
-
     df_image_times, df_question_views, _\
         = match_experiment_events_to_experiment_group(
             df_events, experiment_group, baseline)
@@ -113,30 +109,6 @@ def preprocess_subject(
         = match_eye_fixations_timestamps_to_experiment_images(
             df_fixations, df_image_times)
 
-    # df_crosses_with_fixations\
-    #     = match_eye_fixations_timestamps_to_experiment_images(
-    #         df_fixations, df_cross_views)
-
-    df_question_images_with_fixations =\
-        df_images_with_fixations[
-            df_images_with_fixations['kind'] == 'question']
-    if baseline:
-        df_baseline_text_boxes = parse_text_bounding_box_file(
-            f"dataset/TextBB_Baseline/TextBB_G{group}.txt")
-        df_words_with_fixations = \
-            filter_fixatios_to_words(
-                df_question_images_with_fixations,
-                df_baseline_text_boxes,
-                experiment_group_html)
-    else:
-        df_baseline_text_boxes = parse_text_bounding_box_file(
-            f"dataset/TextBB/TextBB_G{group}.txt")
-        df_words_with_fixations = \
-            filter_fixatios_to_words(
-                df_question_images_with_fixations,
-                df_baseline_text_boxes,
-                experiment_group_html)
-
     df_images_with_fixations_filtered = filter_fixations_to_images(
         group, df_images_with_fixations, dataset_dir, baseline)
 
@@ -145,8 +117,11 @@ def preprocess_subject(
             df_images_with_fixations_filtered, df_element_labels)
     user_data = get_user_data_from_submit(submits[0][1])
 
+    #print(df_eye_fixations_to_elements['stage'])
+    df_eye_fixations_to_elements = df_eye_fixations_to_elements[df_eye_fixations_to_elements['stage'] == 'enc']
+
     return df_eye_fixations_to_elements, df_question_views,\
-        user_data, df_words_with_fixations
+        user_data
 
 
 if __name__ == '__main__':
