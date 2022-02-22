@@ -18,9 +18,9 @@ def edf_to_asc(edf_file: str, out_dir: str = None) -> str:
     else:
         out_file = f'{out_dir}/{edf_file.split("/")[-1][:-4]}.asc'
     if out_dir is not None:
-        subprocess.run(["edf2asc", edf_file, out_file, "-ns"])  # , "-nmsg"])
+        subprocess.run(["edf2asc", edf_file, out_file, "-sg" , "-y"])
     else:
-        subprocess.run(["edf2asc", edf_file, "-ns"])  # , "-nmsg"])
+        subprocess.run(["edf2asc", edf_file, "-sg", "-y"])
     return out_file
 
 
