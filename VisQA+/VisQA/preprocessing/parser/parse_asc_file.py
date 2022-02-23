@@ -43,7 +43,7 @@ def parse_asc_file_for_EFIX_events(
             within_fix_lines = lines[fix_start+1: fix_end]
             within_fix_lines = list(map(lambda x: x.split(), within_fix_lines))
             # Each gaze sample has nine entries in our case and timestamp (first column) is a number.
-            within_fix_gaze_lines = list(filter(lambda x: len(x) == 9 and x[0].isnumeric(), within_fix_lines))
+            within_fix_gaze_lines = list(filter(lambda x: len(x) == 8 and x[0].isnumeric(), within_fix_lines))
             flattened = chain.from_iterable(within_fix_gaze_lines)
             flattened = '\t'.join(flattened)
             gaze_lines.append(flattened)
