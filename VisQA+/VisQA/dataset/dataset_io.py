@@ -33,7 +33,7 @@ def write_csv_fixations_by_vis_for_subject(
     else:
         fix_by_vis_path = f"{dataset_dir}/eyetracking/{REL_FIX_BY_VIS_PATH}"
 
-    df = df_user_fixations[['axp', 'ayp',
+    df = df_user_fixations[['axp', 'ayp', 'gaze',
                             'dur', 'file', 'stage', 'question_id']]
     df.axp = df.axp.round(2)
     df.ayp = df.ayp.round(2)
@@ -45,7 +45,7 @@ def write_csv_fixations_by_vis_for_subject(
         group.drop('file', axis=1, inplace=True)
         group.drop('stage', axis=1, inplace=True)
         group.drop('question_id', axis=1, inplace=True)
-        group = group[['axp', 'ayp', 'dur']]
+        group = group[['axp', 'ayp', 'dur', 'gaze']]
         group.reset_index(drop=True, inplace=True)
 
         if question_id == -1:
