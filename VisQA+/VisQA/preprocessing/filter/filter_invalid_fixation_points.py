@@ -51,14 +51,35 @@ def filter_fixations_by_bounding_box(
             & (df['ayp'] <= y_limits[1])]
     if df.empty:
         return df
+
     df['axp'] = df.apply(
         lambda row: int((row['axp'] - x_limits[0]) /
                         scale_factor) if row['image_name'] == image_name else row['axp'],
         axis=1
     )
+    df['glxp'] = df.apply(
+        lambda row: ((row['glxp'] - x_limits[0]) /
+                        scale_factor).astype(int) if row['image_name'] == image_name else row['glxp'],
+        axis=1
+    )
+    df['grxp'] = df.apply(
+        lambda row: ((row['grxp'] - x_limits[0]) /
+                        scale_factor).astype(int) if row['image_name'] == image_name else row['grxp'],
+        axis=1
+    )
     df['ayp'] = df.apply(
         lambda row: int((row['ayp'] - y_limits[0]) /
                         scale_factor) if row['image_name'] == image_name else row['ayp'],
+        axis=1
+    )
+    df['glyp'] = df.apply(
+        lambda row: ((row['glyp'] - y_limits[0]) /
+                        scale_factor).astype(int) if row['image_name'] == image_name else row['glyp'],
+        axis=1
+    )
+    df['gryp'] = df.apply(
+        lambda row: ((row['gryp'] - y_limits[0]) /
+                        scale_factor).astype(int) if row['image_name'] == image_name else row['gryp'],
         axis=1
     )
     return df
