@@ -34,6 +34,13 @@ def check_consistency(fix, gaze_samples):
     #print(f'avg_x: {avg_x}; fix_x: {fix_x}; avg_y: {avg_y}; fix_y: {fix_y}')
     assert abs(avg_x - fix_x) <= 1 and abs(avg_y - fix_y) <= 1, "Consistency check failed!"
 
+def transparent_cmap(cmap, N=255):
+    "Copy colormap and set alpha values"
+
+    mycmap = cmap
+    mycmap._init()
+    mycmap._lut[:,-1] = np.linspace(0, 0.8, N+4)
+    return mycmap
 
 if __name__ == '__main__':
     img_src = '_Di4yk2H64QEBkEncRGMhg==.0'
@@ -48,19 +55,20 @@ if __name__ == '__main__':
     #print(element_labels)
 
     bandwidth = 1
+    mycmap = transparent_cmap(plt.cm.Reds)
 
-    for index, row in fixation.iterrows():
-        # Gaze Left XY
-        gaze_samples = parse_gaze_samples(row[4], row[5])
+    with Image.open(img_dir+img_src+'.png') as im:
+        fig= plt.figure(figsize=(16, 16))
+        width, height = im.size  # original image size
 
-        # Step 4: Perform KDE on gaze samples associated to fixation
-        kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(gaze_samples)
+        for index, row in fixation.iterrows():
+            # Gaze Left XY
+            gaze_samples = parse_gaze_samples(row[4], row[5])
 
-        # Step 5: check which AOIs are overlaid by the resulting density and to which extent
-        with Image.open(img_dir+img_src+'.png') as im:
-            #fig = plt.figure(figsize=(16, 16))
-            #plt.imshow(im)
-            width, height = im.size  # original image size
+            # Step 4: Perform KDE on gaze samples associated to fixation
+            kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(gaze_samples)
+
+            # Step 5: check which AOIs are overlaid by the resulting density and to which extent
 
             X,Y = np.meshgrid(np.arange(0, width, 1), np.arange(0, height, 1))
             xy = np.vstack([Y.ravel(), X.ravel()]).T
@@ -68,6 +76,7 @@ if __name__ == '__main__':
             Z = np.full((width, height), 0, dtype="int")
             Z = np.exp(kde.score_samples(xy))
             Z = Z.reshape(X.shape)
+            if(Z.max()==0): continue
 
             for row in element_labels.iterrows():
                 #row[1][0] id
@@ -83,6 +92,8 @@ if __name__ == '__main__':
                     print(Z[rr,cc].sum()) # this should be the accumulated density of all pixels within that polygon
                 except: break
 
-            #levels = np.linspace(0, Z.max(), 25)
-            #plt.contourf(X, Y, Z, levels=levels, cmap=plt.cm.Reds)
-            #plt.show()
+            plt.imshow(im)
+            levels = np.linspace(0, Z.max(), 25)
+            cb = plt.contourf(X, Y, Z, levels=levels, cmap=mycmap)
+            plt.colorbar(cb)
+            plt.show()
