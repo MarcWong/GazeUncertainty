@@ -71,8 +71,6 @@ def preprocess_all(
     :type internal_time_to_unix_csv: str
     :rtype: pd.DataFrame
     """
-    questions = []
-    users_data = []
     dataset = []
     df_internal_time_to_unix = pd.read_csv(
         internal_time_to_unix_csv, dtype={'verified': 'str'})
@@ -127,28 +125,16 @@ def preprocess_all(
         )
 
         dataset.append(df_eye_fixations_to_elements)
-        questions.append(df_question_views)
-        users_data.append(user_data)
 
     df_dataset = pd.concat(dataset, axis=0)
 
     if baseline:
         df_dataset_path = f"{dataset_dir}/dataset_baseline.csv"
-        df_questions_path = f"{dataset_dir}/questions_baseline.csv"
-        df_survey_data_path = f"{dataset_dir}/survey_data_baseline.csv"
     else:
         df_dataset_path = f"{dataset_dir}/dataset.csv"
-        df_questions_path = f"{dataset_dir}/questions.csv"
-        df_survey_data_path = f"{dataset_dir}/survey_data.csv"
 
     df_dataset.to_csv(df_dataset_path, index=False)
-    df_questions = pd.concat(questions, axis=0)
-    df_questions.to_csv(df_questions_path, index=False)
-    df_survey_data = pd.DataFrame.from_records(
-        users_data,
-        columns=['workerId', 'gender', 'ageGroup', 'ethnicity', 'education',
-                 'vizExperience'])
-    df_survey_data.to_csv(df_survey_data_path, index=False)
+
     return df_dataset
 
 

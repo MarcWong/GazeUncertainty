@@ -41,6 +41,11 @@ def write_csv_fixations_by_vis_for_subject(
     for _, group in df.groupby(['file', 'stage', 'question_id']):
         stage = group.iloc[0]['stage']
         file = group.iloc[0]['file']
+        
+        json_file = open(f"{dataset_dir}/merged/qa/{file}.json")
+        file_json = json.load(json_file)
+        json_file.close()
+
         question_id = group.iloc[0]['question_id']
         group.drop('file', axis=1, inplace=True)
         group.drop('stage', axis=1, inplace=True)
@@ -49,10 +54,10 @@ def write_csv_fixations_by_vis_for_subject(
         group.reset_index(drop=True, inplace=True)
 
         if question_id == -1:
-            Path(f"{fix_by_vis_path}/{file}/{stage}")\
+            Path(f"{fix_by_vis_path}/{file_json['vistype']}/{file}/{stage}")\
                 .mkdir(parents=True, exist_ok=True)
             group.to_csv(
-                f"{fix_by_vis_path}/{file}/{stage}/{subject_id}.csv",
+                f"{fix_by_vis_path}/{file_json['vistype']}/{file}/{stage}/{subject_id}.csv",
                 header=False)
         else:
             Path(f"{fix_by_vis_path}/{file}/{stage}/{question_id}")\
@@ -65,7 +70,7 @@ def write_csv_fixations_by_vis_for_subject(
 def convert_desc(desc: pd.Series):
     desc = desc.lower()
     if "annotation" in desc:
-        return "D"
+        return "A"
     elif "axis" in desc:
         return "X"
     elif "graphic" in desc:

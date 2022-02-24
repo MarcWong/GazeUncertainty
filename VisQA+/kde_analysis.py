@@ -47,7 +47,7 @@ if __name__ == '__main__':
     img_dir = '/netpool/homes/wangyo/Dataset/VisQA/merged/src/'
 
     #fixation_path = f'C:/Users/kochme/Datasets/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
-    fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
+    fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/hbw1.csv'
     fixation = pd.read_csv(fixation_path)
 
     element_labels = parse_element_label(f'/netpool/homes/wangyo/Dataset/VisQA/element_labels/{img_src}')
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             # Step 5: check which AOIs are overlaid by the resulting density and to which extent
 
             X,Y = np.meshgrid(np.arange(0, width, 1), np.arange(0, height, 1))
-            xy = np.vstack([Y.ravel(), X.ravel()]).T
+            xy = np.vstack([X.ravel(), Y.ravel()]).T
 
             Z = np.full((width, height), 0, dtype="int")
             Z = np.exp(kde.score_samples(xy))
@@ -86,7 +86,7 @@ if __name__ == '__main__':
                 rr, cc = polygon(
                     np.array(row[1][3])[:,1],
                     np.array(row[1][3])[:,0],
-                    (width, height))
+                    (height, width))
                 try:
                     print(rr.max(), cc.max())
                     print(Z[rr,cc].sum()) # this should be the accumulated density of all pixels within that polygon
