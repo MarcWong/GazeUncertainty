@@ -79,8 +79,8 @@ if __name__ == '__main__':
     img_dir = 'C:/Users/kochme/Datasets/VisQA/merged/src_bb/'
     img_path = os.path.join(img_dir, img_src + '.png')
 
-    fixation_path = f'C:/Users/kochme/Datasets/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
-    #fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
+    #fixation_path = f'C:/Users/kochme/Datasets/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
+    fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/hbw1.csv'
     fixation = pd.read_csv(fixation_path)
 
     #element_labels = parse_element_label(f'/netpool/homes/wangyo/Dataset/VisQA/element_labels/{img_src}')
