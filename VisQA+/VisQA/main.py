@@ -194,6 +194,7 @@ def main(
     if dataset_csv_path is not None:
         df_dataset = pd.read_csv(dataset_csv_path)
     else:
+        print('******** WARNING: Only stage \'enc\' will be preprocessed! ********')
         df_dataset = preprocess_all(
             dataset_dir, subjects_path, elem_labels_dir,
             subject_files_dir, html_subject_files_dir, baseline,
@@ -277,6 +278,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_csv", type=str, default=None)
     parser.add_argument("--analyze", type=bool, default=False)
     args = vars(parser.parse_args())
+
 
     if (args['dataset_dir'] is not None
         and (args['eye_tracking_results'] is None
