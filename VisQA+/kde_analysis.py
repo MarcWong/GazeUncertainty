@@ -78,18 +78,24 @@ def plot_density_overlay(kde, im):
 
 def flipping_candidate_score(densities):
     """
-    Flipping candidates score is calculated on given densities.
-    Densities must be positive and sum up to one.
-
-    The score has the following interpretation:
-
-    ~> 0: Deterministic distribution (certain)
-    ~> 1: Uniform distribution (uncertain)
+    Flipping candidates score has the following interpretation:
+    ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
+    ~> 1: The density distribution is close to uniform, i.e. the fixation covers at least two AOI to a very similar extent.
     """
+    def deviation_from_uniform(densities, N):
+        uniform = 1 / N
+        return sum([abs(d - uniform) for _, d in densities])
+
+    sorted_densities = sorted(densities, reverse=True, key=lambda x: x[1])
     N = len(densities)
-    uniform = 1 / N
-    deviation = sum([abs(d - uniform) for _, d in densities])
-    return 1. - ((2 / N) * deviation)
+    max_score = 0
+
+    # Flipping candidates switch between at least two AOIs
+    for n in range(2, N+1):
+        deviation = deviation_from_uniform(sorted_densities[:n], n)
+        score = 1. - ((2 / n) * deviation)
+        max_score = max(score, max_score)
+    return max_score
 
 
 def process(im, fixation, element_labels, show_density_overlay=True):
@@ -98,8 +104,9 @@ def process(im, fixation, element_labels, show_density_overlay=True):
     Output can be verified with show_density_overlay=True
     """
     bandwidth = 1
-    density_threshold = 1e-3
+    density_threshold = 0.01
     flipping_threshold = 0.5
+    flipping_candidates = []
 
     for index, row in fixation.iterrows():
         # Gaze XY
@@ -114,10 +121,13 @@ def process(im, fixation, element_labels, show_density_overlay=True):
         if len(densities) > 1:
             score = flipping_candidate_score(densities)
             print(f'Flipping candidate score = {score:.3f}: {densities}')
-            if show_density_overlay and score >= flipping_threshold:
-                plot_density_overlay(kde, im)
-                plt.plot(row[1], row[2], 'bx')
-                plt.show()
+            if score >= flipping_threshold:
+                flipping_candidates.append((densities))
+                if show_density_overlay:
+                    plot_density_overlay(kde, im)
+                    plt.plot(row[1], row[2], 'bx')
+                    plt.show()
+    return flipping_candidates
 
 
 if __name__ == '__main__':
@@ -151,7 +161,8 @@ if __name__ == '__main__':
                 try:
                     print(f'Processing fixations \'{os.path.basename(fix_path)}\' on visualization \'{vis}\'')
                     # For high-res visualizations this might be take some time!
-                    process(im, fixation, element_labels)
+                    flipping_candidates = process(im, fixation, element_labels)
+                    print(f'Number of flipping candidates: {len(flipping_candidates)}')
                 except Exception as e:
                     print(e)
                     continue
