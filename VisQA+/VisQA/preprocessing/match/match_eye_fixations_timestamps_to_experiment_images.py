@@ -31,14 +31,14 @@ def match_eye_fixations_timestamps_to_experiment_images(
                  img_time.stage, img_time.start_time,
                  img_time.end_time, img_time.question_id, hit.event, hit.eye,
                  hit.start_time, hit.end_time, hit.dur, hit.axp, hit.ayp,
-                 hit.aps, hit.glxp, hit.glyp, hit.grxp, hit.gryp)
+                 hit.aps, hit.gxp, hit.gyp)
             )
 
     df_images_with_fixations = pd.DataFrame.from_records(
         df_images_with_fixations,
         columns=['image_name', 'kind', 'image_flag', 'stage', 'start_time',
                  'end_time', 'question_id', 'EVENT', 'eye', 'fix_start_time',
-                 'fix_end_time', 'dur', 'axp', 'ayp', 'aps', 'glxp', 'glyp', 'grxp', 'gryp'])
+                 'fix_end_time', 'dur', 'axp', 'ayp', 'aps', 'gxp', 'gyp'])
     return df_images_with_fixations
 
 

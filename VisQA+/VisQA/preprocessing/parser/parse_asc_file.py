@@ -38,34 +38,42 @@ def parse_asc_file_for_EFIX_events(
             sfix_line_num = list(filter(lambda row: lines[row].startswith("SFIX"), range(len(lines))))
             efix_line_num = list(filter(lambda row: lines[row].startswith("EFIX"), range(len(lines))))
 
-        gaze_right_x = []
-        gaze_right_y = []
-        gaze_left_x = []
-        gaze_left_y = []
+            assert False, 'Exit. Unsure if gaze to fixation mapping works correctly in binocular case.'
+        
+        assert len(sfix_line_num) == len(efix_line_num), "Number of SFIX events does not match number of EFIX events"
 
-        for fix_start, fix_end in zip(sfix_line_num, efix_line_num):
-            within_fix_lines = lines[fix_start+1: fix_end]
-
-            # Each gaze sample has one timestamp entry and six floating point entries
-            within_fix_gaze_lines = list(filter(lambda x: re.match(r'\d+\s*(\d+\.\d+\s*){6}', x), within_fix_lines))
-            within_fix_gaze_lines = list(map(lambda x: x.split(), within_fix_gaze_lines))
-
-            gaze_left_x.append(np.array(list(map(lambda x: x[1], within_fix_gaze_lines))).astype(float))
-            gaze_left_y.append(np.array(list(map(lambda x: x[2], within_fix_gaze_lines))).astype(float))
-            gaze_right_x.append(np.array(list(map(lambda x: x[4], within_fix_gaze_lines))).astype(float))
-            gaze_right_y.append(np.array(list(map(lambda x: x[5], within_fix_gaze_lines))).astype(float))
-
+        gaze_x = []
+        gaze_y = []
         fix_lines = list(map(lambda x: x.split(), fix_lines))
 
-        assert len(fix_lines) == len(gaze_left_x) == len(gaze_left_y) == len(gaze_right_x) == len(gaze_right_y), "Number of fixation lines must equal the number of gaze lines"
+        for fix_start, fix_end, l in zip(sfix_line_num, efix_line_num, fix_lines):
+            within_fix_lines = lines[fix_start+1: fix_end]
+            # Each gaze sample has one timestamp entry and six floating point entries
+            within_fix_gaze_lines = list(filter(lambda x: re.match(r'\d+\s*((-)?\d*\.\d*\s*){6}', x), within_fix_lines))
+            within_fix_gaze_lines = list(map(lambda x: x.split(), within_fix_gaze_lines))
 
-        # EFIX <eye> <start_time> <end_time> <dur> <axp> <ayp> <aps> <gaze>
+            if l[1] == 'L':
+                gxp = np.array(list(map(lambda x: x[1], within_fix_gaze_lines))).astype(float)
+                gyp = np.array(list(map(lambda x: x[2], within_fix_gaze_lines))).astype(float)
+            else:
+                gxp = np.array(list(map(lambda x: x[4], within_fix_gaze_lines))).astype(float)
+                gyp = np.array(list(map(lambda x: x[5], within_fix_gaze_lines))).astype(float)
+
+            #assert abs(gxp.mean() - float(l[5])) < 15 and abs(gyp.mean() - float(l[6])) < 15,\
+            #    f"""Inconsistent gaze2fix mapping in file {asc_file}:
+            #    X: {gxp.mean():.2f} (mean) <-> {l[5]} (true)
+            #    Y: {gyp.mean():.2f} (mean) <-> {l[6]} (true)"""
+
+            gaze_x.append(gxp)
+            gaze_y.append(gyp)
+
+        # EFIX <eye> <start_time> <end_time> <dur> <axp> <ayp> <aps> <gaze x> <gaze y>
         fix_lines = [[l[0], l[1], int(l[2]), int(l[3]),
                   float(l[4]), float(l[5]), float(l[6]),
-                  int(l[7]), glxp, glyp, grxp, gryp] for l, glxp, glyp, grxp, gryp in zip(fix_lines, gaze_left_x, gaze_left_y, gaze_right_x, gaze_right_y)]
+                  int(l[7]), gxp, gyp] for l, gxp, gyp in zip(fix_lines, gaze_x, gaze_y)]
         df = pd.DataFrame.from_records(
             fix_lines, columns=['event', 'eye', 'start_time',
-                            'end_time', 'dur', 'axp', 'ayp', 'aps', 'glxp', 'glyp', 'grxp', 'gryp'])
+                            'end_time', 'dur', 'axp', 'ayp', 'aps', 'gxp', 'gyp'])
     return df
 
 

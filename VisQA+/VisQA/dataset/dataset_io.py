@@ -3,6 +3,9 @@ from typing import Dict
 import os
 import json
 import pandas as pd
+import numpy as np
+import sys
+
 
 from pathlib import Path
 
@@ -33,10 +36,14 @@ def write_csv_fixations_by_vis_for_subject(
     else:
         fix_by_vis_path = f"{dataset_dir}/eyetracking/{REL_FIX_BY_VIS_PATH}"
 
-    df = df_user_fixations[['axp', 'ayp', 'glxp', 'glyp', 'grxp', 'gryp',
+    df = df_user_fixations[['axp', 'ayp', 'gxp', 'gyp',
                             'dur', 'file', 'stage', 'question_id']]
     df.axp = df.axp.round(2)
     df.ayp = df.ayp.round(2)
+
+    # https://stackoverflow.com/questions/53316471/pandas-dataframes-to-csv-truncates-long-values
+    df['gxp'] = df['gxp'].apply(lambda x: np.array2string(x, precision=2, separator=';', threshold=sys.maxsize, max_line_width=10000000, floatmode='fixed'))
+    df['gyp'] = df['gyp'].apply(lambda y: np.array2string(y, precision=2, separator=';', threshold=sys.maxsize, max_line_width=10000000, floatmode='fixed'))
 
     for _, group in df.groupby(['file', 'stage', 'question_id']):
         stage = group.iloc[0]['stage']
@@ -45,7 +52,7 @@ def write_csv_fixations_by_vis_for_subject(
         group.drop('file', axis=1, inplace=True)
         group.drop('stage', axis=1, inplace=True)
         group.drop('question_id', axis=1, inplace=True)
-        group = group[['axp', 'ayp', 'dur', 'glxp', 'glyp', 'grxp', 'gryp']]
+        group = group[['axp', 'ayp', 'dur', 'gxp', 'gyp']]
         group.reset_index(drop=True, inplace=True)
 
         if question_id == -1:
