@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
-from PIL import Image
 import matplotlib.pyplot as plt
 import os.path
+import argparse
 
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
 from VisQA.dataset.dataset_io import convert_desc
-from VisQA.preprocessing.match.match_eye_fixations_to_element_labels import compute_is_in_polygon
 from sklearn.neighbors import KernelDensity
 from skimage.draw import polygon
+from PIL import Image
+from glob import glob
 
 
 def parse_gaze_samples(xp_str, yp_str):
@@ -22,14 +23,13 @@ def parse_gaze_samples(xp_str, yp_str):
 
 def transparent_cmap(cmap, N=255):
     "Copy colormap and set alpha values"
-
     mycmap = cmap
     mycmap._init()
     mycmap._lut[:,-1] = np.linspace(0, 0.8, N+4)
     return mycmap
 
 
-def element_label_densities(kde, element_labels, size, density_threshold=1e-5):
+def element_label_densities(kde, element_labels, size):
     densities = []
     width, height = size
 
@@ -44,10 +44,13 @@ def element_label_densities(kde, element_labels, size, density_threshold=1e-5):
             (height, width))
         in_poly = np.vstack((cc, rr)).T
         acc_density = np.exp(kde.score_samples(in_poly)).sum()
+        label = convert_desc(row[1][1])
+        densities.append((label, acc_density))
 
-        if acc_density >= density_threshold:
-            label = convert_desc(row[1][1])
-            densities.append((label, acc_density))
+    sum_densities = sum([d for _, d in densities]) 
+    assert sum_densities <= 1+1e-1, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
+    # Artificial label that covers the rest of the visual space
+    densities.append(('#', 1.-sum_densities))
     return densities
 
 
@@ -73,36 +76,82 @@ def plot_density_overlay(kde, im):
     plt.colorbar(cb)
 
 
-if __name__ == '__main__':
-    img_src = '_Di4yk2H64QEBkEncRGMhg==.0'
-    #img_dir = '/netpool/homes/wangyo/Dataset/VisQA/merged/src/'
-    img_dir = 'C:/Users/kochme/Datasets/VisQA/merged/src_bb/'
-    img_path = os.path.join(img_dir, img_src + '.png')
+def flipping_candidate_score(densities):
+    """
+    Flipping candidates score is calculated on given densities.
+    Densities must be positive and sum up to one.
 
-    #fixation_path = f'C:/Users/kochme/Datasets/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/byq1.csv'
-    fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/hbw1.csv'
-    fixation = pd.read_csv(fixation_path)
+    The score has the following interpretation:
+
+    ~> 0: Deterministic distribution (certain)
+    ~> 1: Uniform distribution (uncertain)
+    """
+    N = len(densities)
+    uniform = 1 / N
+    deviation = sum([abs(d - uniform) for _, d in densities])
+    return 1. - ((2 / N) * deviation)
+
+
+def process(im, fixation, element_labels, show_density_overlay=True):
+    """
+    Perform KDE analysis steps. Calculated densities are used to find flipping candidates.
+    Output can be verified with show_density_overlay=True
+    """
+    bandwidth = 1
+    density_threshold = 1e-3
+    flipping_threshold = 0.5
+
+    for index, row in fixation.iterrows():
+        # Gaze XY
+        gaze_samples = parse_gaze_samples(row[4], row[5])
+        # Step 4: Perform KDE on gaze samples associated to fixation
+        kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(gaze_samples)
+        # Step 5: check which AOIs are overlaid by the resulting density and to which extent
+        densities = element_label_densities(kde, element_labels, im.size)
+        # Filter out small densities
+        densities = list(filter(lambda x: x[1] >= density_threshold, densities))
+        # Step 6: check for which segments the distribution overlays at least two AOIs to a very similar extent (the flipping candidates)
+        if len(densities) > 1:
+            score = flipping_candidate_score(densities)
+            print(f'Flipping candidate score = {score:.3f}: {densities}')
+            if show_density_overlay and score >= flipping_threshold:
+                plot_density_overlay(kde, im)
+                plt.plot(row[1], row[2], 'bx')
+                plt.show()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset_dir", type=str, default=None)
+    parser.add_argument("--images_dir", type=str, default=None)
+    parser.add_argument("--vis_type", type=str, default='scatter')
+    args = vars(parser.parse_args())
+
+    #img_dir = '/netpool/homes/wangyo/Dataset/VisQA/merged/src/'
+    #img_path = os.path.join(args['images_dir'], args['vis'].split('/')[1] + '.png')
+
+    #fixation_path = f'{args["dataset_dir"]}/eyetracking/csv_files/fixationsByVis/{args["vis"]}/enc/{args["fixation"]}.csv'
+    #fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/hbw1.csv'
+    #fixation = pd.read_csv(fixation_path)
 
     #element_labels = parse_element_label(f'/netpool/homes/wangyo/Dataset/VisQA/element_labels/{img_src}')
-    element_labels = parse_element_label(f'C:/Users/kochme/Datasets/VisQA/element_labels/{img_src}')
-    element_labels = combine_rows(element_labels)
+    #element_labels = parse_element_label(f'{args["dataset_dir"]}/element_labels/{args["vis"].split("/")[1]}')
+    #element_labels = combine_rows(element_labels)
 
-    bandwidth = 1
+    for vis_path in glob(os.path.join(args['dataset_dir'], 'eyetracking', 'csv_files', 'fixationsByVis', args['vis_type'], '*')):
+        vis = os.path.basename(vis_path)
+        img_path = os.path.join(args['images_dir'], vis + '.png')
 
+        element_labels = parse_element_label(os.path.join(args['dataset_dir'], 'element_labels', vis))
+        element_labels = combine_rows(element_labels)
 
-    with Image.open(img_path) as im:
-        plt.show()
-        for index, row in fixation.iterrows():
-            # Gaze XY
-            gaze_samples = parse_gaze_samples(row[4], row[5])
-
-            # Step 4: Perform KDE on gaze samples associated to fixation
-            kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(gaze_samples)
-            # Step 5: check which AOIs are overlaid by the resulting density and to which extent
-            densities = element_label_densities(kde, element_labels, im.size)
-            print(densities)
-
-            plot_density_overlay(kde, im)
-            plt.plot(row[1], row[2], 'bx')
-            plt.show()
-
+        with Image.open(img_path) as im:
+            for fix_path in glob(os.path.join(vis_path, 'enc', '*.csv')):
+                fixation = pd.read_csv(fix_path)
+                try:
+                    print(f'Processing fixations \'{os.path.basename(fix_path)}\' on visualization \'{vis}\'')
+                    # For high-res visualizations this might be take some time!
+                    process(im, fixation, element_labels)
+                except Exception as e:
+                    print(e)
+                    continue
