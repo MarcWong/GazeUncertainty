@@ -117,7 +117,6 @@ def preprocess_subject(
             df_images_with_fixations_filtered, df_element_labels)
     user_data = get_user_data_from_submit(submits[0][1])
 
-    #print(df_eye_fixations_to_elements['stage'])
     df_eye_fixations_to_elements = df_eye_fixations_to_elements[df_eye_fixations_to_elements['stage'] == 'enc']
 
     return df_eye_fixations_to_elements, df_question_views,\

@@ -38,9 +38,9 @@ def parse_asc_file_for_EFIX_events(
             sfix_line_num = list(filter(lambda row: lines[row].startswith("SFIX"), range(len(lines))))
             efix_line_num = list(filter(lambda row: lines[row].startswith("EFIX"), range(len(lines))))
 
-            assert False, 'Exit. Unsure if gaze to fixation mapping works correctly in binocular case.'
+            assert False, 'Exit. Gaze to fixation mapping not yet supported for binocular case.'
         
-        assert len(sfix_line_num) == len(efix_line_num), "Number of SFIX events does not match number of EFIX events"
+        assert len(sfix_line_num) == len(efix_line_num), f"In file {asc_file}: Number of SFIX events does not match number of EFIX events"
 
         gaze_x = []
         gaze_y = []
@@ -58,11 +58,6 @@ def parse_asc_file_for_EFIX_events(
             else:
                 gxp = np.array(list(map(lambda x: x[4], within_fix_gaze_lines))).astype(float)
                 gyp = np.array(list(map(lambda x: x[5], within_fix_gaze_lines))).astype(float)
-
-            #assert abs(gxp.mean() - float(l[5])) < 15 and abs(gyp.mean() - float(l[6])) < 15,\
-            #    f"""Inconsistent gaze2fix mapping in file {asc_file}:
-            #    X: {gxp.mean():.2f} (mean) <-> {l[5]} (true)
-            #    Y: {gyp.mean():.2f} (mean) <-> {l[6]} (true)"""
 
             gaze_x.append(gxp)
             gaze_y.append(gyp)
