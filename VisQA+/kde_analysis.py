@@ -48,9 +48,10 @@ def element_label_densities(kde, element_labels, size):
         densities.append((label, acc_density))
 
     sum_densities = sum([d for _, d in densities]) 
-    assert sum_densities <= 1+1e-1, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
+    assert sum_densities <= 1, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
     # Artificial label that covers the rest of the visual space
-    densities.append(('#', 1.-sum_densities))
+    if sum_densities < 1.:
+        densities.append(('#', 1.-sum_densities))
     return densities
 
 
@@ -135,7 +136,12 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_dir", type=str, default=None)
     parser.add_argument("--images_dir", type=str, default=None)
     parser.add_argument("--vis_type", type=str, default='scatter')
+    parser.add_argument("--show_density_overlay", action='store_true')
     args = vars(parser.parse_args())
+
+    ok_images = []
+    with open('no_overlap_vis', 'r') as f:
+        ok_images.extend([line.replace('\n', '') for line in f.readlines()])
 
     #img_dir = '/netpool/homes/wangyo/Dataset/VisQA/merged/src/'
     #img_path = os.path.join(args['images_dir'], args['vis'].split('/')[1] + '.png')
@@ -152,17 +158,17 @@ if __name__ == '__main__':
         vis = os.path.basename(vis_path)
         img_path = os.path.join(args['images_dir'], vis + '.png')
 
+        if vis not in ok_images:
+            print(f'INFO: Skip vis {img_path}')
+            continue
+
         element_labels = parse_element_label(os.path.join(args['dataset_dir'], 'element_labels', vis))
         element_labels = combine_rows(element_labels)
 
         with Image.open(img_path) as im:
             for fix_path in glob(os.path.join(vis_path, 'enc', '*.csv')):
                 fixation = pd.read_csv(fix_path)
-                try:
-                    print(f'Processing fixations \'{os.path.basename(fix_path)}\' on visualization \'{vis}\'')
-                    # For high-res visualizations this might be take some time!
-                    flipping_candidates = process(im, fixation, element_labels)
-                    print(f'Number of flipping candidates: {len(flipping_candidates)}')
-                except Exception as e:
-                    print(e)
-                    continue
+                print(f'********** Processing fixations \'{os.path.basename(fix_path)}\' on visualization \'{vis}\' **********\n')
+                # For high-res visualizations this might be take some time!
+                flipping_candidates = process(im, fixation, element_labels, show_density_overlay=args['show_density_overlay'])
+                print(f'\n------> Number of flipping candidates: {len(flipping_candidates)}\n')
