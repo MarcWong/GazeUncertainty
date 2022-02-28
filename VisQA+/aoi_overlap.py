@@ -1,11 +1,13 @@
 import argparse
 import os.path
 import numpy as np
+import matplotlib.pyplot as plt
+
 from glob import glob
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
-from skimage.draw import polygon, polygon2mask
-from PIL import Image
-import matplotlib.pyplot as plt
+from skimage.draw import polygon2mask
+from PIL import Image, ImageDraw
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -14,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument("--max_overlap_ratio", type=float, default=1.)
     args = vars(parser.parse_args())
 
-    with open('no_overlap_vis', 'w') as f:
+    with open('vis_whitelist', 'w') as f:
         for img_path in glob(os.path.join(args['images_dir'], '*.png')):
             vis = os.path.basename(img_path)[:-4]
             element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
@@ -23,26 +25,28 @@ if __name__ == '__main__':
             with Image.open(img_path) as im:
                 width, height = im.size
                 canvas = np.zeros((height, width), dtype=np.bool8)
-                overlap_pixel = 0
+                overlap = np.zeros((height, width), dtype=np.bool8)
+                im_draw = ImageDraw.Draw(im)
 
                 for row in element_labels.iterrows():
-                    polygon = np.array(row[1][3])
-                    mask = polygon2mask((height, width), polygon[:, ::-1])
-                    overlap_pixel += (mask & canvas).sum()
-                    canvas = (mask & canvas) | (np.logical_not(canvas) & mask)
+                    poly = np.array(row[1][3])
+                    if len(poly) > 1:
+                        im_draw.polygon(poly.flatten().tolist(), outline='blue')
+                        mask = polygon2mask((height, width), poly[:, ::-1])
+                        overlap |= (canvas & mask)
+                        canvas |= mask
 
-                overlap_pixel /= width*height
-                if overlap_pixel <= args['max_overlap_ratio']:
+                overlap_ratio = overlap.sum() / (width*height)
+                if overlap_ratio <= args['max_overlap_ratio']:
                     f.write(f'{vis}\n')
-                    print(f'Ratio of overlapping pixels: {overlap_pixel:.5f} - {img_path}')
+                    print(f'Ratio of overlapping pixels in {vis}: {overlap_ratio:.5f}')
 
-                canvas = canvas.astype(float)
-                canvas[canvas == 0] = 0.75
+                overlap = overlap.astype(float) * .5
 
                 im = np.array(im)
-                im[:, :, 0] = im[:, :, 0] * canvas
-                im[:, :, 1] = im[:, :, 1] * canvas
-                im[:, :, 2] = im[:, :, 2] * canvas
+                im[:, :, 1] = im[:, :, 1] * (1 - overlap)
+                im[:, :, 2] = im[:, :, 2] * (1 - overlap)
 
                 plt.imshow(im)
+                plt.title(f'{vis} - overlapping regions (shaded red)')
                 plt.show()
