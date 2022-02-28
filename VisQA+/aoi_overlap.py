@@ -3,6 +3,7 @@ import os.path
 import numpy as np
 import matplotlib.pyplot as plt
 
+from os import makedirs
 from glob import glob
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
 from skimage.draw import polygon2mask
@@ -15,6 +16,8 @@ if __name__ == '__main__':
     parser.add_argument("--images_dir", type=str, default=None)
     parser.add_argument("--max_overlap_ratio", type=float, default=1.)
     args = vars(parser.parse_args())
+
+    makedirs(os.path.join(os.path.dirname(args['images_dir']), 'src_bb'), exist_ok=True)
 
     with open('vis_whitelist', 'w') as f:
         for img_path in glob(os.path.join(args['images_dir'], '*.png')):
@@ -42,11 +45,8 @@ if __name__ == '__main__':
                     print(f'Ratio of overlapping pixels in {vis}: {overlap_ratio:.5f}')
 
                 overlap = overlap.astype(float) * .5
-
                 im = np.array(im)
                 im[:, :, 1] = im[:, :, 1] * (1 - overlap)
                 im[:, :, 2] = im[:, :, 2] * (1 - overlap)
 
-                plt.imshow(im)
-                plt.title(f'{vis} - overlapping regions (shaded red)')
-                plt.show()
+                plt.imsave(os.path.join(os.path.dirname(args['images_dir']), 'src_bb', os.path.basename(img_path)), im)
