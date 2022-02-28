@@ -38,17 +38,21 @@ def element_label_densities(kde, element_labels, size):
         #row[1][1] desc
         #row[1][2] file
         #row[1][3] coordinates
+        # Polygon expects Y,X
         rr, cc = polygon(
             np.array(row[1][3])[:,1],
             np.array(row[1][3])[:,0],
             (height, width))
+        # KDE expects X,Y
         in_poly = np.vstack((cc, rr)).T
         acc_density = np.exp(kde.score_samples(in_poly)).sum()
         label = convert_desc(row[1][1])
         densities.append((label, acc_density))
 
-    sum_densities = sum([d for _, d in densities]) 
-    assert sum_densities <= 1, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
+    sum_densities = sum([d for _, d in densities])
+
+    # TODO How should we handle the overlapping case and to which extent it becomes a problem?
+    assert sum_densities <= 1+1e-3, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
     # Artificial label that covers the rest of the visual space
     if sum_densities < 1.:
         densities.append(('#', 1.-sum_densities))
@@ -57,7 +61,7 @@ def element_label_densities(kde, element_labels, size):
 
 def plot_density_overlay(kde, im):
     mycmap = transparent_cmap(plt.cm.Reds)
-    fig = plt.figure(figsize=(16, 16))
+    plt.figure(figsize=(16, 16))
 
     width, height = im.size  # original image size
 
@@ -69,7 +73,7 @@ def plot_density_overlay(kde, im):
     Z = Z.reshape(X.shape)
 
     if(Z.max()==0):
-        return  
+        return
 
     plt.imshow(im)
     levels = np.linspace(0, Z.max(), 25)
@@ -82,6 +86,8 @@ def flipping_candidate_score(densities):
     Flipping candidates score has the following interpretation:
     ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
     ~> 1: The density distribution is close to uniform, i.e. the fixation covers at least two AOI to a very similar extent.
+
+    NOTE: Is there off-the-shelf solution for this? There might be better / more elegant way to compute this.
     """
     def deviation_from_uniform(densities, N):
         uniform = 1 / N
@@ -99,9 +105,9 @@ def flipping_candidate_score(densities):
     return max_score
 
 
-def process(im, fixation, element_labels, show_density_overlay=True):
+def find_flipping_candidates(im, fixation, element_labels, show_density_overlay=True):
     """
-    Perform KDE analysis steps. Calculated densities are used to find flipping candidates.
+    Perform KDE analysis steps to find flipping candidates.
     Output can be verified with show_density_overlay=True
     """
     bandwidth = 1
@@ -121,54 +127,71 @@ def process(im, fixation, element_labels, show_density_overlay=True):
         # Step 6: check for which segments the distribution overlays at least two AOIs to a very similar extent (the flipping candidates)
         if len(densities) > 1:
             score = flipping_candidate_score(densities)
-            print(f'Flipping candidate score = {score:.3f}: {densities}')
+            print(f'  Flipping candidate score = {score:.3f}: {densities}')
             if score >= flipping_threshold:
                 flipping_candidates.append((densities))
-                if show_density_overlay:
-                    plot_density_overlay(kde, im)
-                    plt.plot(row[1], row[2], 'bx')
-                    plt.show()
+
+        if show_density_overlay:
+            plot_density_overlay(kde, im)
+            plt.plot(row[1], row[2], 'bx')
+            plt.show()
     return flipping_candidates
 
 
+def flipping_candidate_rate_of_vis(vis_path, dataset_dir, images_dir, show_density_overlay=True):
+    """
+    Returns rate of flipping candidates of all recordings associated to given visualization.
+    """
+    vis = os.path.basename(vis_path)
+    img_path = os.path.join(images_dir, vis + '.png')
+
+    element_labels = parse_element_label(os.path.join(dataset_dir, 'element_labels', vis))
+    element_labels = combine_rows(element_labels)
+    flipping_candidate_rate = []
+
+    with Image.open(img_path) as im:
+        for fix_path in glob(os.path.join(vis_path, 'enc', '*.csv')):
+            fixation = pd.read_csv(fix_path)
+            print(f'Processing fixations \'{os.path.basename(fix_path)}:\n')
+            # For high-res visualizations this might be take some time!
+            flipping_candidates = find_flipping_candidates(im, fixation, element_labels, show_density_overlay=show_density_overlay)
+            flipping_candidate_rate.append(len(flipping_candidates) / len(fixation))
+            print(f'\nNumber of fixations being flipping candidates: {len(flipping_candidates)}/{len(fixation)}\n')
+    return flipping_candidate_rate
+
+
 if __name__ == '__main__':
+    VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_dir", type=str, default=None)
     parser.add_argument("--images_dir", type=str, default=None)
-    parser.add_argument("--vis_type", type=str, default='scatter')
     parser.add_argument("--show_density_overlay", action='store_true')
+    parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
     args = vars(parser.parse_args())
 
+    # NOTE: Some visualzations cause issues in densitiy computation due to overlapping AOIs.
+    # aoi_overlap.py ouputs a file 'vis_whitelist' containing visualization with mimimal AOI overlap.
     ok_images = []
-    with open('no_overlap_vis', 'r') as f:
+    with open('vis_whitelist', 'r') as f:
         ok_images.extend([line.replace('\n', '') for line in f.readlines()])
 
-    #img_dir = '/netpool/homes/wangyo/Dataset/VisQA/merged/src/'
-    #img_path = os.path.join(args['images_dir'], args['vis'].split('/')[1] + '.png')
+    vis_types = set(args['vis_types'])
+    type2rate = {vt: [] for vt in vis_types}
 
-    #fixation_path = f'{args["dataset_dir"]}/eyetracking/csv_files/fixationsByVis/{args["vis"]}/enc/{args["fixation"]}.csv'
-    #fixation_path = f'/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/{img_src}/enc/hbw1.csv'
-    #fixation = pd.read_csv(fixation_path)
+    for vis_type in vis_types:
+        vis_paths = glob(os.path.join(args['dataset_dir'], 'eyetracking', 'csv_files', 'fixationsByVis', vis_type, '*'))
+        vis_paths = filter(lambda p: os.path.basename(p) in ok_images, vis_paths)
 
-    #element_labels = parse_element_label(f'/netpool/homes/wangyo/Dataset/VisQA/element_labels/{img_src}')
-    #element_labels = parse_element_label(f'{args["dataset_dir"]}/element_labels/{args["vis"].split("/")[1]}')
-    #element_labels = combine_rows(element_labels)
+        for path in vis_paths:
+            print(f'********** Processing visualization \'{os.path.basename(path)}\' **********\n')
+            # Flipping candidate ratios of all recordings associated to vis
+            fc_rate = flipping_candidate_rate_of_vis(path, args['dataset_dir'], args['images_dir'], args['show_density_overlay'])
+            if len(fc_rate) > 0:
+                avg_fc_rate = np.mean(fc_rate)
+                type2rate[vis_type].append(avg_fc_rate)
+                print(f'\nAverage flipping candidate ratio: {avg_fc_rate:.5f}\n')
+            else:
+                print('\nNo flipping candidates!\n')
 
-    for vis_path in glob(os.path.join(args['dataset_dir'], 'eyetracking', 'csv_files', 'fixationsByVis', args['vis_type'], '*')):
-        vis = os.path.basename(vis_path)
-        img_path = os.path.join(args['images_dir'], vis + '.png')
-
-        if vis not in ok_images:
-            print(f'INFO: Skip vis {img_path}')
-            continue
-
-        element_labels = parse_element_label(os.path.join(args['dataset_dir'], 'element_labels', vis))
-        element_labels = combine_rows(element_labels)
-
-        with Image.open(img_path) as im:
-            for fix_path in glob(os.path.join(vis_path, 'enc', '*.csv')):
-                fixation = pd.read_csv(fix_path)
-                print(f'********** Processing fixations \'{os.path.basename(fix_path)}\' on visualization \'{vis}\' **********\n')
-                # For high-res visualizations this might be take some time!
-                flipping_candidates = process(im, fixation, element_labels, show_density_overlay=args['show_density_overlay'])
-                print(f'\n------> Number of flipping candidates: {len(flipping_candidates)}\n')
+        np.save(f'{vis_type}_FC_rates.npy', type2rate[vis_type])
