@@ -108,12 +108,18 @@ def preprocess_all(
         assert(len(debugout) == 1)
         debugout_file = debugout[0]
 
-        df_eye_fixations_to_elements, df_question_views, user_data\
-            = preprocess_subject(
-                group, df_element_labels, asc_file, debugout_file,
-                experiment_desc, experiment_desc_html, dataset_dir, time_unix,
-                time_internal_unix, time_internal_main, time_main_content,
-                good_eye, baseline)
+        try:
+            df_eye_fixations_to_elements, df_question_views, user_data\
+                = preprocess_subject(
+                    group, df_element_labels, asc_file, debugout_file,
+                    experiment_desc, experiment_desc_html, dataset_dir, time_unix,
+                    time_internal_unix, time_internal_main, time_main_content,
+                    good_eye, baseline)
+        except AssertionError:
+            print(
+                f"Warn subject {subject_id} was skipped due to data corruption.")
+            continue
+
         df_eye_fixations_to_elements['subject'] = subject_id
         df_question_views['subject'] = subject_id
 
