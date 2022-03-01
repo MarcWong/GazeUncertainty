@@ -115,9 +115,13 @@ def preprocess_all(
                     experiment_desc, experiment_desc_html, dataset_dir, time_unix,
                     time_internal_unix, time_internal_main, time_main_content,
                     good_eye, baseline)
-        except AssertionError:
+        except AssertionError as e:
             print(
-                f"Warn subject {subject_id} was skipped due to data corruption.")
+                f"\nWarn subject {subject_id} was skipped: {e}")
+            continue
+        except Exception as e:
+            print(
+                f"\nWarn subject {subject_id} was skipped: {e}")
             continue
 
         df_eye_fixations_to_elements['subject'] = subject_id
