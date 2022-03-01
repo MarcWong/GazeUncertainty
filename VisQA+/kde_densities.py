@@ -1,3 +1,9 @@
+"""
+Steps 4 and 5: Computes to what extent the density associated to each fixations overlaps with the interior of neighboring AOIs.
+The density is computed from KDE applied to gaze samples associated to the fixation.
+The output, categorized by vis type, is stored in 'densityByVis/'
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -84,10 +90,10 @@ def plot_density_overlay(kde, im):
 
 def calc_densities(im, fixations, element_labels, bandwidth=1.0, show_density_overlay=True):
     """
-    Perform KDE analysis steps to calculate densities associated to each fixation
+    Calculate overlap between given AOIs and densities computed from KDE step.
     Output can be verified with show_density_overlay=True
     """
-    densities = []
+    densities = {}
     for index, row in fixations.iterrows():
         # Gaze XY
         gaze_samples = parse_gaze_samples(row[4], row[5])
@@ -101,7 +107,7 @@ def calc_densities(im, fixations, element_labels, bandwidth=1.0, show_density_ov
         fixation_density = element_label_densities(kde, element_labels, im.size)
         # Filter zero densities
         fixation_density = list(filter(lambda d: d[1] > 0.0, fixation_density))
-        densities.append(fixation_density)
+        densities[index] = fixation_density
     return densities
 
 
@@ -121,8 +127,9 @@ if __name__ == '__main__':
     VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_dir", type=str, default=None)
-    parser.add_argument("--images_dir", type=str, default=None)
+    parser.add_argument("--dataset_dir", type=str)
+    parser.add_argument("--images_dir", type=str)
+    parser.add_argument("--element_labels_dir", type=str)
     parser.add_argument("--show_density_overlay", action='store_true')
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
     args = vars(parser.parse_args())
@@ -132,10 +139,9 @@ if __name__ == '__main__':
     root_dir = os.path.join(args['dataset_dir'], 'densitiesByVis')
     makedirs(root_dir, exist_ok=True)
 
-    # NOTE: Some visualzations cause issues in density computation due to overlapping AOIs.
-    # aoi_overlap.py outputs a file 'vis_whitelist' containing visualization with mimimal AOI overlap.
+    # NOTE: Discard images that do not meet certain constraints
     ok_images = []
-    with open('vis_whitelist', 'r') as f:
+    with open('vis_ok', 'r') as f:
         ok_images.extend([line.replace('\n', '') for line in f.readlines()])
 
     for vis_type in vis_types:
@@ -145,7 +151,7 @@ if __name__ == '__main__':
             vis = os.path.basename(vis_path)
             if vis not in ok_images:
                 continue
-            element_labels = parse_element_label(os.path.join(args['dataset_dir'], 'element_labels_cleaned', vis))
+            element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
             element_labels = combine_rows(element_labels)
             img_path = os.path.join(args['images_dir'], vis + '.png')
 
