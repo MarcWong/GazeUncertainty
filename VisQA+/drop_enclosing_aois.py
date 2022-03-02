@@ -11,8 +11,8 @@ import numpy as np
 from os import makedirs
 from glob import glob
 from skimage.draw import polygon2mask
-
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
+
 
 def get_polygon_masks(element_labels):
     min_coord = element_labels.apply(lambda row: np.min(row['polygon'], axis=0), result_type='expand', axis=1)
@@ -67,6 +67,8 @@ if __name__ == '__main__':
         for idx in set(enclosing_aoi):
             print(f'\t{element_labels.loc[idx, "desc"]}')
         """
+
+        element_labels = pd.read_csv(path)
         a = element_labels[element_labels.iloc[:, 1].isin(['data (area)', 'data', 'graphical element'])]
         element_labels.drop(a.index, inplace=True)
         element_labels.to_csv(os.path.join(cleaned_dir, os.path.basename(path)), index=False)
