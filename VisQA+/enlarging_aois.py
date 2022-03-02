@@ -86,7 +86,8 @@ def enlargeAOI(element_labels, im, enlargeL:float):
         #row[1][2] file
         #row[1][3] coordinates
         if np.shape(np.array(row[1][3]))[0] < 3:
-            print("not a poly")
+            for i in range(np.shape(np.array(row[1][3]))[0]):
+                df = df.append({'id': row[1][0], 'desc': row[1][1], 'x': row[1][3][i][0], 'y': row[1][3][i][1]}, ignore_index=True)
             continue
 
         poly = np.array(row[1][3])
@@ -101,7 +102,15 @@ def enlargeAOI(element_labels, im, enlargeL:float):
 
     return df
 
-ENLARGE_PX = 7.85
+#ENLARGE_PX = 1.97
+#ENLARGE_PX = 3.93
+ENLARGE_PX = 5.87
+#ENLARGE_PX = 7.85
+#ENLARGE_PX = 8.75
+#ENLARGE_PX = 9.81
+#ENLARGE_PX = 11.78
+#ENLARGE_PX = 13.74
+#ENLARGE_PX = 15.7
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -121,5 +130,5 @@ if __name__ == '__main__':
         with Image.open(img_path) as im:
             element_labels = parse_element_label(os.path.join(args['element_labels_dir'], visname))
             element_labels = combine_rows(element_labels)
-            element_labels = enlargeAOI(element_labels, im, ENLARGE_PX)
+            element_labels = enlargeAOI(element_labels, im, -ENLARGE_PX)
             element_labels.to_csv(os.path.join(cleaned_dir, os.path.basename(path)), header=False, index=False)
