@@ -52,12 +52,14 @@ if __name__ == '__main__':
             width, height = im.size
 
             draw_bounding_boxes(im, element_labels)
+            im = np.array(im)
 
+            """
             overlap = get_overlap(width, height, element_labels)
             overlap = overlap.astype(float) * .5
 
-            im = np.array(im)
             im[:, :, 1] = im[:, :, 1] * (1 - overlap)
             im[:, :, 2] = im[:, :, 2] * (1 - overlap)
+            """
 
             plt.imsave(os.path.join(os.path.dirname(args['images_dir']), 'src_bb', os.path.basename(img_path)), im)

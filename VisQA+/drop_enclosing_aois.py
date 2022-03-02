@@ -50,23 +50,25 @@ def get_enclosing_aois(masks):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--element_labels_dir", type=str, default=None)
+    parser.add_argument("--element_labels_dir", type=str, required=True)
     args = vars(parser.parse_args())
 
     cleaned_dir = os.path.join(os.path.dirname(args['element_labels_dir']), 'element_labels_fixed')
     makedirs(cleaned_dir, exist_ok=True)
 
     for path in glob(os.path.join(args['element_labels_dir'], '*')):
+        element_labels = pd.read_csv(path)
+        print(path)
+
         """
         element_labels = parse_element_label(path)
         element_labels = combine_rows(element_labels)
-
         enclosing_aoi = get_enclosing_aois(get_polygon_masks(element_labels))
         for idx in set(enclosing_aoi):
             print(f'\t{element_labels.loc[idx, "desc"]}')
-        element_labels.to_csv(os.path.join(cleaned_dir, os.path.basename(path)), index=False)
         """
 
         element_labels = pd.read_csv(path)
         a = element_labels[element_labels.iloc[:, 1].isin(['data (area)', 'data', 'graphical element'])]
         element_labels.drop(a.index, inplace=True)
+        element_labels.to_csv(os.path.join(cleaned_dir, os.path.basename(path)), index=False)

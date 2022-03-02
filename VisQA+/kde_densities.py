@@ -26,6 +26,11 @@ def parse_gaze_samples(xp_str, yp_str):
     xps = xp_str[1:-1].split(';')
     yps = yp_str[1:-1].split(';')
 
+    if len(xps) == 0 or len(yps) == 0:
+        raise ValueError('Could not parse any gaze samples!')
+    if xps == [''] or yps == ['']:
+        raise ValueError('Could not parse any gaze samples!')
+
     xps = np.array(xps).astype(float)
     yps = np.array(yps).astype(float)
     return np.stack((xps, yps), axis=1)
@@ -83,7 +88,7 @@ def plot_density_overlay(kde, im):
         return
 
     plt.imshow(im)
-    levels = np.linspace(0, Z.max(), 25)
+    levels = np.linspace(0, Z.max(), 250)
     cb = plt.contourf(X, Y, Z, levels=levels, cmap=mycmap)
     plt.colorbar(cb)
 
@@ -115,21 +120,24 @@ def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay
     vis = os.path.basename(vis_path)
 
     for fix_path in tqdm(glob(os.path.join(vis_path, 'enc', '*.csv')), desc=f'{vis}', unit='csv files'):
-        fixations = pd.read_csv(fix_path)
-        densities = calc_densities(im, fixations, element_labels, show_density_overlay=show_density_overlay)
+        try:
+            fixations = pd.read_csv(fix_path, header=None)
+            densities = calc_densities(im, fixations, element_labels, show_density_overlay=show_density_overlay)
 
-        filename = os.path.join(out_dir, os.path.basename(fix_path)[:-4])
-        with open(filename + '.json', 'w', encoding='utf-8') as f:
-            json.dump(densities, f, ensure_ascii=False)
+            filename = os.path.join(out_dir, os.path.basename(fix_path)[:-4])
+            with open(filename + '.json', 'w', encoding='utf-8') as f:
+                json.dump(densities, f, ensure_ascii=False)
+        except ValueError as e:
+            print(f'\nSkip {fix_path}: {e}')
 
 
 if __name__ == '__main__':
     VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_dir", type=str)
-    parser.add_argument("--images_dir", type=str)
-    parser.add_argument("--element_labels_dir", type=str)
+    parser.add_argument("--dataset_dir", type=str, required=True)
+    parser.add_argument("--images_dir", type=str, required=True)
+    parser.add_argument("--element_labels_dir", type=str, required=True)
     parser.add_argument("--show_density_overlay", action='store_true')
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
     args = vars(parser.parse_args())

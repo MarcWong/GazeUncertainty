@@ -18,8 +18,8 @@ from PIL import Image
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--element_labels_dir", type=str, default=None)
-    parser.add_argument("--images_dir", type=str, default=None)
+    parser.add_argument("--element_labels_dir", type=str, required=True)
+    parser.add_argument("--images_dir", type=str, required=True)
     parser.add_argument("--max_pixels", type=int, default=500*400)
     parser.add_argument("--max_overlap_ratio", type=float, default=0.01)
     args = vars(parser.parse_args())
