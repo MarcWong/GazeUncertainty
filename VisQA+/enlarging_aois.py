@@ -73,7 +73,7 @@ def shrink_polygon(polygon: np.array, L, imgsize, fixWidth=False):
         Qi = Pi + L / sin_theta * (normalize_v1 + normalize_v2)
         Qi = np.maximum(Qi, 0)
         Qi[0] = np.where(Qi[0] < width - 1, Qi[0], width - 1)
-        Qi[1] = np.where(Qi[1] > height - 1, Qi[1], height - 1)
+        Qi[1] = np.where(Qi[1] < height - 1, Qi[1], height - 1)
         shrinked_polygon.append(np.array(Qi, dtype=int))
     return np.asarray(shrinked_polygon)
 
@@ -101,7 +101,7 @@ def enlargeAOI(element_labels, im, enlargeL:float):
 
     return df
 
-ENLARGE_PX = 15
+ENLARGE_PX = 7.85
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
