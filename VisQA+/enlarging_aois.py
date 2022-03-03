@@ -5,6 +5,7 @@ The updated label definitions are written to 'element_labels_enlarged/'.
 
 import argparse
 import os.path
+from tokenize import group
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -13,6 +14,23 @@ from os import makedirs
 from glob import glob
 
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
+
+# This is the real_on_screen px!
+
+ENLARGE_PX = 6.75
+#ENLARGE_PX = 13.5
+#ENLARGE_PX = 27
+#ENLARGE_PX = 40.5
+#ENLARGE_PX = 54
+#ENLARGE_PX = 67.5
+#ENLARGE_PX = 81
+#ENLARGE_PX = 94.5
+#ENLARGE_PX = 108
+#ENLARGE_PX = 121.5
+#ENLARGE_PX = 135
+
+MAX_WIDTH = [-1, 1066.666, 1169, 1069.25, 1600, 1066.666, 1066.666, 1023.28, 1066.666, 1142.67, 1035.22]
+MAX_HEIGHT = [-1, 800, 800, 800, 774.98, 800, 800, 800, 800, 800, 800]
 
 # shape of polygon: [N, 2]
 def Perimeter(polygon: np.array):
@@ -77,7 +95,16 @@ def shrink_polygon(polygon: np.array, L, imgsize, fixWidth=False):
         shrinked_polygon.append(np.array(Qi, dtype=int))
     return np.asarray(shrinked_polygon)
 
-def enlargeAOI(element_labels, im, enlargeL:float):
+def enlargeAOI(element_labels, groupID, im, enlargeL:float):
+    w, h = im.size
+    if MAX_HEIGHT[groupID] / h < MAX_WIDTH[groupID] / w:
+        scale_factor = MAX_HEIGHT[groupID] / h
+    else:
+        scale_factor = MAX_WIDTH[groupID] / w
+    
+    realEnlargeL = enlargeL / scale_factor
+    #print(realEnlargeL)
+
     df = pd.DataFrame(columns=['id', 'desc', 'x', 'y'])
 
     for row in element_labels.iterrows():
@@ -94,7 +121,7 @@ def enlargeAOI(element_labels, im, enlargeL:float):
         perimeter = Perimeter(poly)
         area = Area(poly)
 
-        expansion_poly = shrink_polygon(poly, enlargeL, im.size, fixWidth=True)
+        expansion_poly = shrink_polygon(poly, realEnlargeL, im.size, fixWidth=True)
         #print(perimeter, area, expansion_poly)
 
         for i in range(np.shape(expansion_poly)[0]):
@@ -102,21 +129,17 @@ def enlargeAOI(element_labels, im, enlargeL:float):
 
     return df
 
-#ENLARGE_PX = 1.97
-#ENLARGE_PX = 3.93
-ENLARGE_PX = 5.87
-#ENLARGE_PX = 7.85
-#ENLARGE_PX = 8.75
-#ENLARGE_PX = 9.81
-#ENLARGE_PX = 11.78
-#ENLARGE_PX = 13.74
-#ENLARGE_PX = 15.7
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--element_labels_dir", type=str, required=True)
     parser.add_argument("--images_dir", type=str, required=True)
     args = vars(parser.parse_args())
+    
+
+    df_img_group = pd.read_csv(
+        'dataset/image_group.csv')
+
 
     cleaned_dir = os.path.join(os.path.dirname(args['element_labels_dir']), f'element_labels_enlarged_{ENLARGE_PX}')
     makedirs(cleaned_dir, exist_ok=True)
@@ -124,11 +147,15 @@ if __name__ == '__main__':
     for path in glob(os.path.join(args['element_labels_dir'], '*')):
         visname = os.path.basename(path)
         img_path = os.path.join(args['images_dir'], visname + '.png')
+        imgname = visname + '.png'
         if not os.path.exists(img_path):
             img_path = os.path.join(args['images_dir'], visname + '.jpg')
+            imgname = visname + '.jpg'
+
+        groupID = df_img_group[df_img_group['image'] == imgname].group.to_numpy()
 
         with Image.open(img_path) as im:
             element_labels = parse_element_label(os.path.join(args['element_labels_dir'], visname))
             element_labels = combine_rows(element_labels)
-            element_labels = enlargeAOI(element_labels, im, -ENLARGE_PX)
+            element_labels = enlargeAOI(element_labels, groupID[0], im, -ENLARGE_PX)
             element_labels.to_csv(os.path.join(cleaned_dir, os.path.basename(path)), header=False, index=False)
