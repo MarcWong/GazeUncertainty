@@ -11,6 +11,7 @@ import os.path
 import argparse
 import pandas as pd
 import json
+import logging
 
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
 from VisQA.dataset.dataset_io import convert_desc
@@ -22,53 +23,12 @@ from tqdm import tqdm
 from os import makedirs
 
 
-def parse_gaze_samples(xp_str, yp_str):
-    xps = xp_str[1:-1].split(';')
-    yps = yp_str[1:-1].split(';')
-
-    if len(xps) == 0 or len(yps) == 0:
-        raise ValueError('Could not parse any gaze samples!')
-    if xps == [''] or yps == ['']:
-        raise ValueError('Could not parse any gaze samples!')
-
-    xps = np.array(xps).astype(float)
-    yps = np.array(yps).astype(float)
-    return np.stack((xps, yps), axis=1)
-
-
 def transparent_cmap(cmap, N=255):
     "Copy colormap and set alpha values"
     mycmap = cmap
     mycmap._init()
     mycmap._lut[:,-1] = np.linspace(0, 0.8, N+4)
     return mycmap
-
-
-def element_label_densities(kde, element_labels, size):
-    densities = []
-    width, height = size
-
-    for row in element_labels.iterrows():
-        #row[1][0] id
-        #row[1][1] desc
-        #row[1][2] file
-        #row[1][3] coordinates
-        # Polygon expects Y,X
-        rr, cc = polygon(
-            np.array(row[1][3])[:,1],
-            np.array(row[1][3])[:,0],
-            (height, width))
-        # KDE expects X,Y
-        in_poly = np.vstack((cc, rr)).T
-        acc_density = np.exp(kde.score_samples(in_poly)).sum()
-        label = convert_desc(row[1][1])
-        densities.append((label, acc_density))
-
-    sum_densities = sum([d for _, d in densities])
-    # TODO How should we handle the overlapping case and to which extent it becomes a problem?
-    #assert sum_densities <= 1+1e-1, f"Element labels are overlapping. Densities add up to {sum_densities:.3f}"
-    # Artificial label that covers the rest of the visual space
-    return densities
 
 
 def plot_density_overlay(kde, im):
@@ -93,7 +53,43 @@ def plot_density_overlay(kde, im):
     plt.colorbar(cb)
 
 
-def calc_densities(im, fixations, element_labels, bandwidth=1.0, show_density_overlay=True):
+def parse_gaze_samples(xp_str, yp_str):
+    xps = xp_str[1:-1].split(';')
+    yps = yp_str[1:-1].split(';')
+
+    if len(xps) == 0 or len(yps) == 0:
+        raise ValueError('Could not parse any gaze samples!')
+    if xps == [''] or yps == ['']:
+        raise ValueError('Could not parse any gaze samples!')
+
+    xps = np.array(xps).astype(float)
+    yps = np.array(yps).astype(float)
+    return np.stack((xps, yps), axis=1)
+
+
+def element_label_densities(kde, element_labels, size):
+    densities = []
+    width, height = size
+
+    for row in element_labels.iterrows():
+        #row[1][0] id
+        #row[1][1] desc
+        #row[1][2] file
+        #row[1][3] coordinates
+        # Polygon expects Y,X
+        rr, cc = polygon(
+            np.array(row[1][3])[:,1],
+            np.array(row[1][3])[:,0],
+            (height, width))
+        # KDE expects X,Y
+        in_poly = np.vstack((cc, rr)).T
+        acc_density = np.exp(kde.score_samples(in_poly)).sum()
+        label = convert_desc(row[1][1])
+        densities.append((label, acc_density))
+    return densities
+
+
+def calc_densities(im, fixations, element_labels, bandwidth, show_density_overlay=True):
     """
     Calculate overlap between given AOIs and densities computed from KDE step.
     Output can be verified with show_density_overlay=True
@@ -112,23 +108,27 @@ def calc_densities(im, fixations, element_labels, bandwidth=1.0, show_density_ov
         fixation_density = element_label_densities(kde, element_labels, im.size)
         # Filter zero densities
         fixation_density = list(filter(lambda d: d[1] > 0.0, fixation_density))
+
+        sum_densities = sum([d for _, d in fixation_density])
+        if sum_densities > 1.001:
+            logging.warning(f'At fixation {index}: densities sum up to {sum_densities:.3f} > 1.0')
+
         densities[index] = fixation_density
     return densities
 
 
-def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay):
+def densities_of_vis(vis_path, out_dir, im, element_labels, bandwidth, show_density_overlay):
     vis = os.path.basename(vis_path)
-
     for fix_path in tqdm(glob(os.path.join(vis_path, 'enc', '*.csv')), desc=f'{vis}', unit='csv files'):
         try:
             fixations = pd.read_csv(fix_path, header=None)
-            densities = calc_densities(im, fixations, element_labels, show_density_overlay=show_density_overlay)
+            densities = calc_densities(im, fixations, element_labels, bandwidth=bandwidth, show_density_overlay=show_density_overlay)
 
             filename = os.path.join(out_dir, os.path.basename(fix_path)[:-4])
             with open(filename + '.json', 'w', encoding='utf-8') as f:
                 json.dump(densities, f, ensure_ascii=False)
         except ValueError as e:
-            print(f'\nSkip {fix_path}: {e}')
+            logging.critical(f'Skip {fix_path}: {e}')
 
 
 if __name__ == '__main__':
@@ -140,6 +140,7 @@ if __name__ == '__main__':
     parser.add_argument("--element_labels_dir", type=str, required=True)
     parser.add_argument("--show_density_overlay", action='store_true')
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
+    parser.add_argument("--bandwidth", type=float, required=True)
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
@@ -152,13 +153,30 @@ if __name__ == '__main__':
     with open('vis_ok', 'r') as f:
         ok_images.extend([line.replace('\n', '') for line in f.readlines()])
 
+    logging_filename = f'kde_densities_{"-".join(vis_types)}.log'
+    logging.basicConfig(filename=os.path.join(root_dir, logging_filename),
+                        filemode='w',
+                        format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
+
+    logging.info("".join(["*"] * 80))
+    logging.info(f"dataset_dir: {args['dataset_dir']}")
+    logging.info(f"images_dir: {args['images_dir']}")
+    logging.info(f"element_labels_dir: {args['element_labels_dir']}")
+    logging.info(f"bandwidth: {args['bandwidth']:.2f}")
+    logging.info(f"number of elements in vis_ok: {len(ok_images)}")
+    logging.info("".join(["*"] * 80))
+
     for vis_type in vis_types:
         vis_type_dir = os.path.join(args['dataset_dir'], 'eyetracking', 'csv_files', 'fixationsByVis', vis_type)
 
         for vis_path in glob(os.path.join(vis_type_dir, '*')):
             vis = os.path.basename(vis_path)
             if vis not in ok_images:
+                logging.info(f'Skip {vis} since it is not in vis_ok')
                 continue
+
             element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
             element_labels = combine_rows(element_labels)
             img_path = os.path.join(args['images_dir'], vis + '.png')
@@ -168,4 +186,4 @@ if __name__ == '__main__':
             makedirs(vis_dir, exist_ok=True)
 
             with Image.open(img_path) as im:
-                densities_of_vis(vis_path, vis_dir, im, element_labels, args['show_density_overlay'])
+                densities_of_vis(vis_path, vis_dir, im, element_labels, bandwidth=args['bandwidth'], show_density_overlay=args['show_density_overlay'])
