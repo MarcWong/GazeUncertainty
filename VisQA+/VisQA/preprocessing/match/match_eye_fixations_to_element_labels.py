@@ -1,6 +1,7 @@
 import os
 import argparse
 import pandas as pd
+from glob import glob
 
 from scipy.spatial.distance import euclidean
 from shapely.geometry import Point
@@ -120,14 +121,23 @@ def match_eye_fixations_to_element_labels(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--element_label_csv", type=str, default=None)
-    parser.add_argument("--eye_fixations_csv", type=str, default=None)
+    parser.add_argument("--element_labels_dir", type=str, default=None)
     args = vars(parser.parse_args())
 
-    if args['eye_fixations_csv'] and args['element_label_csv']:
-        eyes = pd.read_csv(args['eye_fixations_csv'])
-        elem = pd.read_csv(args['element_label_csv'])
-        elem['polygon'] = elem['polygon'].apply(literal_eval)
+    base_path = '/netpool/homes/wangyo/Dataset/VisQA/eyetracking/csv_files/fixationsByVis/bar'
+    subjects_path = glob(os.path.join(
+    f"{base_path}/*", "enc", "*"))
+
+    subjects_path = [os.path.abspath(path) for path in subjects_path]
+    print(subjects_path)
+
+    for path in subjects_path:
+        visname = path.split('/')[-3]
+        #print(visname)
+        eyes = pd.read_csv(path)
+        elem = pd.read_csv(args['element_labels_dir'] + f'/{visname}')
+        #print(fixations)
+
+        #TODO: fix here
         df = match_eye_fixations_to_element_labels(eyes, elem)
-        df.to_csv(os.path.dirname(
-            args['eye_fixations_csv']) + "/eye_fixation_with_elem_labels.csv", index=False)
+        print(df)
