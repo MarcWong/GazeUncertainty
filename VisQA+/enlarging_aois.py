@@ -17,17 +17,39 @@ from VisQA.preprocessing.parser.parse_element_labels import parse_element_label,
 
 # This is the real_on_screen px!
 
-ENLARGE_PX = 6.75
+#0.05
+#ENLARGE_PX = 2.7
+#0.075
+#ENLARGE_PX = 4.05
+#0.1
+#ENLARGE_PX = 5.4
+#0.15
+#ENLARGE_PX = 8.1
+#0.2
+#ENLARGE_PX = 10.8
+#0.25
 #ENLARGE_PX = 13.5
-#ENLARGE_PX = 27
-#ENLARGE_PX = 40.5
+#0.3
+#ENLARGE_PX = 16.2
+#0.4
+#ENLARGE_PX = 21.6
+#0.5
+ENLARGE_PX = 27
+#0.6
+#ENLARGE_PX = 32.4
+#0.7
+#ENLARGE_PX = 37.8
+#0.8
+#ENLARGE_PX = 43.2
+#0.9
+#ENLARGE_PX = 48.6
+#1 degree
 #ENLARGE_PX = 54
 #ENLARGE_PX = 67.5
 #ENLARGE_PX = 81
 #ENLARGE_PX = 94.5
+#2 degrees
 #ENLARGE_PX = 108
-#ENLARGE_PX = 121.5
-#ENLARGE_PX = 135
 
 MAX_WIDTH = [-1, 1066.666, 1169, 1069.25, 1600, 1066.666, 1066.666, 1023.28, 1066.666, 1142.67, 1035.22]
 MAX_HEIGHT = [-1, 800, 800, 800, 774.98, 800, 800, 800, 800, 800, 800]
@@ -103,7 +125,7 @@ def enlargeAOI(element_labels, groupID, im, enlargeL:float):
         scale_factor = MAX_WIDTH[groupID] / w
     
     realEnlargeL = enlargeL / scale_factor
-    #print(realEnlargeL)
+    #print(im.size, realEnlargeL)
 
     df = pd.DataFrame(columns=['id', 'desc', 'x', 'y'])
 
@@ -120,6 +142,7 @@ def enlargeAOI(element_labels, groupID, im, enlargeL:float):
         poly = np.array(row[1][3])
         perimeter = Perimeter(poly)
         area = Area(poly)
+
 
         expansion_poly = shrink_polygon(poly, realEnlargeL, im.size, fixWidth=True)
         #print(perimeter, area, expansion_poly)
