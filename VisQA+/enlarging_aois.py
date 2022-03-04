@@ -34,7 +34,7 @@ from VisQA.preprocessing.parser.parse_element_labels import parse_element_label,
 #0.4
 #ENLARGE_PX = 21.6
 #0.5
-ENLARGE_PX = 27
+#ENLARGE_PX = 27
 #0.6
 #ENLARGE_PX = 32.4
 #0.7
@@ -44,7 +44,7 @@ ENLARGE_PX = 27
 #0.9
 #ENLARGE_PX = 48.6
 #1 degree
-#ENLARGE_PX = 54
+ENLARGE_PX = 54
 #ENLARGE_PX = 67.5
 #ENLARGE_PX = 81
 #ENLARGE_PX = 94.5
