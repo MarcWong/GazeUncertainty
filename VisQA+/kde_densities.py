@@ -144,7 +144,6 @@ def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay
                 # 0.5 degree on screen
                 BAND_WIDTH *= 5
             BAND_WIDTH /= scale_factor
-            #print(BAND_WIDTH)
             fixations = pd.read_csv(fix_path, header=None)
             densities = calc_densities(im, fixations, element_labels, bandwidth=BAND_WIDTH, show_density_overlay=show_density_overlay)
 
@@ -165,6 +164,7 @@ if __name__ == '__main__':
     parser.add_argument("--show_density_overlay", action='store_true')
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
     #parser.add_argument("--bandwidth", type=float, required=True)
+    parser.add_argument("--vis_included", type=str, default='vis_ok')
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     # NOTE: Discard images that do not meet certain constraints
     ok_images = []
-    with open('vis_ok', 'r') as f:
+    with open(args['vis_included'], 'r') as f:
         ok_images.extend([line.replace('\n', '') for line in f.readlines()])
 
     logging_filename = f'kde_densities_{"-".join(vis_types)}.log'
