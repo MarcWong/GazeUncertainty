@@ -123,6 +123,7 @@ def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 
 def type_analysis(args, vis_types, fc_threshold):
+    fig, ax = plt.subplots(nrows=1, ncols=1)
     type2rate = {vt: [] for vt in vis_types}
 
     for n, vis_type in enumerate(args['vis_types']):
@@ -130,12 +131,17 @@ def type_analysis(args, vis_types, fc_threshold):
             rate = SS_of_vis(vis_densities, fc_threshold, target_ranks=(2,))
             type2rate[vis_type].extend(rate)
 
-    print(type2rate)
+    sns.boxplot(data=list(type2rate.values()), showfliers=False)
 
+    ax.set_xticklabels(type2rate.keys())
+    ax.set_xticks(np.arange(len(type2rate)))
+    ax.set_ylabel('Sequence Score')
+    ax.set_xticklabels(type2rate.keys())
+    plt.show()
 
 if __name__ == '__main__':
     VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
-    sns.set()
+    sns.set_theme(style="white", font_scale=2)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_dir", type=str, required=True)

@@ -14,7 +14,6 @@ import pandas as pd
 from glob import glob
 from tqdm import tqdm
 
-sns.set()
 
 def dist_hellinger(densities, N):
     """
@@ -250,6 +249,7 @@ def plot_fc_proportion_on_first(args, threshold_steps, fc_ranks):
 
 if __name__ == '__main__':
     VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
+    sns.set_theme(style="white", font_scale=2)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_dir", type=str, required=True)
