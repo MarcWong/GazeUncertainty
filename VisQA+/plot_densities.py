@@ -11,7 +11,7 @@ from VisQA.preprocessing.parser.parse_element_labels import parse_element_label,
 from sklearn.neighbors import KernelDensity
 from PIL import Image
 from kde_densities import parse_gaze_samples, element_label_densities, plot_density_overlay
-from flipping_rate_analysis import flipping_candidate_score, flipping_candidate_score_of_rank
+from flipping_rate_analysis import flipping_candidate_score_of_rank
 
 
 def transparent_cmap(cmap, N=255):
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument("--show_density_overlay", action='store_true')
     args = vars(parser.parse_args())
 
-    vis = args['fix_file'].split('/')[-3]
+    vis = args['fix_file'].split('/')[-2]
 
     element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
     element_labels = combine_rows(element_labels)
