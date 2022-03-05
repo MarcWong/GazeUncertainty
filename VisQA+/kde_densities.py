@@ -138,9 +138,10 @@ def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay
     for fix_path in tqdm(glob(os.path.join(vis_path, 'enc', '*.csv')), desc=f'{visname}', unit='csv files'):
         try:
             subject_id = fix_path.split('/')[-1].strip('.csv')
-            #print(subject_id)
-            BAND_WIDTH = 10.8
+            # 0.1 degree on screen
+            BAND_WIDTH = 5.4
             if subject_id in df_img_excluded['subject_id'].values:
+                # 0.5 degree on screen
                 BAND_WIDTH *= 5
             BAND_WIDTH /= scale_factor
             #print(BAND_WIDTH)
