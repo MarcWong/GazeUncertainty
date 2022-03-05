@@ -9,6 +9,7 @@ import argparse
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 from glob import glob
 from tqdm import tqdm
@@ -91,9 +92,9 @@ def fcr_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
     rates = []
-    for vis_densities in glob(os.path.join(dataset_dir, 'densitiesByVis', vis_type, '*')):
+    for densities_dir in glob(os.path.join(dataset_dir, 'densitiesByVis', vis_type, '*')):
         #Flipping candidate ratios of all recordings associated to vis
-        fc_rate = fcr_of_vis(vis_densities, flipping_threshold, target_ranks)
+        fc_rate = fcr_of_vis(densities_dir, flipping_threshold, target_ranks)
         if len(fc_rate) > 0:
             avg_fc_rate = np.mean(fc_rate)
             rates.append(avg_fc_rate)
@@ -101,7 +102,7 @@ def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
     return rates
 
 
-def threshold_analysis(args, steps):
+def fcr_threshold_plot(args, steps):
     thresholds = np.linspace(0, 1, steps)
     threshold_rates = []
 
@@ -118,7 +119,7 @@ def threshold_analysis(args, steps):
     plt.show()
 
 
-def type_analysis(args, vis_types, fc_threshold):
+def fcr_distribution_plot(args, vis_types, fc_threshold):
     fig, ax = plt.subplots(nrows=1, ncols=1)
     type2rate = {vt: [] for vt in vis_types}
 
@@ -127,12 +128,66 @@ def type_analysis(args, vis_types, fc_threshold):
             rate = fcr_of_vis(vis_densities, fc_threshold, target_ranks=(2,))
             type2rate[vis_type].extend(rate)
     sns.boxplot(data=list(type2rate.values()), showfliers=False)
-    #ax.violinplot(type2rate.values(), showmeans=True, showmedians=False, showextrema=False)
 
     ax.set_xticklabels(type2rate.keys())
     ax.set_xticks(np.arange(len(type2rate)))
     ax.set_ylabel('Flipping candidate rate')
     ax.set_xticklabels(type2rate.keys())
+    plt.show()
+
+
+def aoi_stats_of_vis_type(args, vis_type, fc_threshold):
+    aoi_pair_freq = {}
+    for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
+        for path in glob(os.path.join(vis_densities, '*.json')):
+            with open(path, 'r') as f:
+                densities = parse_densities(f)
+                flipping_candidates = find_flipping_candidates(densities, fc_threshold, target_ranks=(2,))
+                aoi_pair_cnt = {}
+                # Count aoi pairs occuring in flipping candidates
+                for c in flipping_candidates:
+                    # Pair defined by the two greatest density values
+                    (aoi_1, _), (aoi_2, _) = sorted(c, key=lambda x: x[1], reverse=True)[:2]
+                    pair_id = aoi_1 + aoi_2
+                    aoi_pair_cnt[pair_id] = aoi_pair_cnt.get(pair_id, 0) + 1
+
+                # Find relative frequency of aoi pair occuring in flipping candidates
+                for aoi_pair, cnt in aoi_pair_cnt.items():
+                    rel_freq = cnt / len(flipping_candidates)
+                    aoi_pair_freq[aoi_pair] = aoi_pair_freq.get(aoi_pair, 0) + rel_freq
+
+    # The order within an aoi pair is irrelevant, e.g. TX = XT
+    for pair_id in sorted(aoi_pair_freq.keys()):
+        reversed = pair_id[::-1]
+        if pair_id != reversed and reversed in aoi_pair_freq:
+            aoi_pair_freq[pair_id] += aoi_pair_freq[reversed]
+            aoi_pair_freq[reversed] = 0
+
+    # Normalize frequencies
+    total_count = sum(aoi_pair_freq.values())
+    aoi_pair_freq = {k: v / total_count for k, v in aoi_pair_freq.items() if v > 0}
+    return aoi_pair_freq
+
+
+def aoi_stats_plot(args, vis_types, fc_threshold):
+    fig, ax = plt.subplots(nrows=1, ncols=len(vis_types), sharex=False, sharey=False)
+
+    df_merged = pd.DataFrame()
+    for vis_type in vis_types:
+        aoi_pair_cnt = aoi_stats_of_vis_type(args, vis_type, fc_threshold)
+        df = pd.DataFrame(aoi_pair_cnt.items(), columns=['aoi_pair', 'freq'])
+        df['vis_type'] = vis_type
+        df_merged = df_merged.append(df)
+    
+    aoi_pairs = df_merged['aoi_pair'].unique()
+    pal = dict(zip(aoi_pairs, sns.color_palette("colorblind", n_colors=len(aoi_pairs))))
+
+    for n, vis_type in enumerate(vis_types):
+        df = df_merged[df_merged['vis_type'] == vis_type].sort_values('freq')
+        axs = sns.barplot(x='aoi_pair', y='freq', data=df, ax=ax[n], palette=pal)
+        axs.set_xticklabels(axs.get_xticklabels(), rotation=0)
+        axs.set_title(vis_type)
+        axs.set_ylim(0, 1)
     plt.show()
 
 
@@ -146,5 +201,6 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    threshold_analysis(args, 10)
-    #type_analysis(args, vis_types, 0.2)
+    #fcr_threshold_plot(args, steps=10)
+    fcr_distribution_plot(args, vis_types, fc_threshold=0.3)
+    aoi_stats_plot(args, vis_types, fc_threshold=0.3)
