@@ -14,6 +14,7 @@ from os import makedirs
 from glob import glob
 
 from VisQA.preprocessing.parser.parse_element_labels import parse_element_label, combine_rows
+from util import compute_scale_factor
 
 # This is the real_on_screen px!
 
@@ -51,8 +52,6 @@ ENLARGE_PX = 54
 #2 degrees
 #ENLARGE_PX = 108
 
-MAX_WIDTH = [-1, 1066.666, 1169, 1069.25, 1600, 1066.666, 1066.666, 1023.28, 1066.666, 1142.67, 1035.22]
-MAX_HEIGHT = [-1, 800, 800, 800, 774.98, 800, 800, 800, 800, 800, 800]
 
 # shape of polygon: [N, 2]
 def Perimeter(polygon: np.array):
@@ -118,12 +117,7 @@ def shrink_polygon(polygon: np.array, L, imgsize, fixWidth=False):
     return np.asarray(shrinked_polygon)
 
 def enlargeAOI(element_labels, groupID, im, enlargeL:float):
-    w, h = im.size
-    if MAX_HEIGHT[groupID] / h < MAX_WIDTH[groupID] / w:
-        scale_factor = MAX_HEIGHT[groupID] / h
-    else:
-        scale_factor = MAX_WIDTH[groupID] / w
-    
+    scale_factor = compute_scale_factor(im, groupID)    
     realEnlargeL = enlargeL / scale_factor
     #print(im.size, realEnlargeL)
 

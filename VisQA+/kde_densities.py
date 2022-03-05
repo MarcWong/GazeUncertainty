@@ -21,6 +21,7 @@ from PIL import Image
 from glob import glob
 from tqdm import tqdm
 from os import makedirs
+from util import compute_scale_factor
 
 
 def transparent_cmap(cmap, N=255):
@@ -117,12 +118,34 @@ def calc_densities(im, fixations, element_labels, bandwidth, show_density_overla
     return densities
 
 
-def densities_of_vis(vis_path, out_dir, im, element_labels, bandwidth, show_density_overlay):
-    vis = os.path.basename(vis_path)
-    for fix_path in tqdm(glob(os.path.join(vis_path, 'enc', '*.csv')), desc=f'{vis}', unit='csv files'):
+def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay):
+    visname = os.path.basename(vis_path)
+    img_path = os.path.join(args['images_dir'], visname + '.png')
+    imgname = visname + '.png'
+    if not os.path.exists(img_path):
+        img_path = os.path.join(args['images_dir'], visname + '.jpg')
+        imgname = visname + '.jpg'
+
+    df_img_excluded = pd.read_csv(
+        'dataset/excluded.csv')
+    df_img_group = pd.read_csv(
+        'dataset/image_group.csv')
+
+    groupID = df_img_group[df_img_group['image'] == imgname].group.to_numpy()
+    scale_factor = compute_scale_factor(im, groupID[0])
+    #print(scale_factor)
+
+    for fix_path in tqdm(glob(os.path.join(vis_path, 'enc', '*.csv')), desc=f'{visname}', unit='csv files'):
         try:
+            subject_id = fix_path.split('/')[-1].strip('.csv')
+            #print(subject_id)
+            BAND_WIDTH = 10.8
+            if subject_id in df_img_excluded['subject_id'].values:
+                BAND_WIDTH *= 5
+            BAND_WIDTH /= scale_factor
+            #print(BAND_WIDTH)
             fixations = pd.read_csv(fix_path, header=None)
-            densities = calc_densities(im, fixations, element_labels, bandwidth=bandwidth, show_density_overlay=show_density_overlay)
+            densities = calc_densities(im, fixations, element_labels, bandwidth=BAND_WIDTH, show_density_overlay=show_density_overlay)
 
             filename = os.path.join(out_dir, os.path.basename(fix_path)[:-4])
             with open(filename + '.json', 'w', encoding='utf-8') as f:
@@ -140,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument("--element_labels_dir", type=str, required=True)
     parser.add_argument("--show_density_overlay", action='store_true')
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
-    parser.add_argument("--bandwidth", type=float, required=True)
+    #parser.add_argument("--bandwidth", type=float, required=True)
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
@@ -164,7 +187,7 @@ if __name__ == '__main__':
     logging.info(f"dataset_dir: {args['dataset_dir']}")
     logging.info(f"images_dir: {args['images_dir']}")
     logging.info(f"element_labels_dir: {args['element_labels_dir']}")
-    logging.info(f"bandwidth: {args['bandwidth']:.2f}")
+    #logging.info(f"bandwidth: {args['bandwidth']:.2f}")
     logging.info(f"number of elements in vis_ok: {len(ok_images)}")
     logging.info("".join(["*"] * 80))
 
@@ -186,4 +209,5 @@ if __name__ == '__main__':
             makedirs(vis_dir, exist_ok=True)
 
             with Image.open(img_path) as im:
-                densities_of_vis(vis_path, vis_dir, im, element_labels, bandwidth=args['bandwidth'], show_density_overlay=args['show_density_overlay'])
+                #densities_of_vis(vis_path, vis_dir, im, element_labels, bandwidth=args['bandwidth'], show_density_overlay=args['show_density_overlay'])
+                densities_of_vis(vis_path, vis_dir, im, element_labels, show_density_overlay=args['show_density_overlay'])
