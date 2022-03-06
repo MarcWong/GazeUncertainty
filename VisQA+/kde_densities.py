@@ -9,7 +9,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os.path
 import argparse
-import pandas as pd
 import json
 import logging
 
@@ -203,7 +202,9 @@ if __name__ == '__main__':
 
             element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
             element_labels = combine_rows(element_labels)
+
             img_path = os.path.join(args['images_dir'], vis + '.png')
+            if not os.path.exists(img_path): img_path = os.path.join(args['images_dir'], vis + '.jpg')
 
             # Create vis type directory
             vis_dir = os.path.join(root_dir, vis_type, vis)
