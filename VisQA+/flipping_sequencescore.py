@@ -99,11 +99,11 @@ def alter_candidate(flipping_candidates):
     # new AOI, old AOI
     return merged_prob[-2][0], merged_prob[-1][0]
 
-def alter_scanpath(scanpath_bs, flipping_candidates):
+def alter_scanpath(scanpath_bs, idxs, flipping_candidates):
     scanpath_new = scanpath_bs
     for i in range(len(flipping_candidates)):
         NewC, OldC = alter_candidate(flipping_candidates[i])
-        scanpath_new = scanpath_new[:i] + NewC + scanpath_new[i+1:]
+        scanpath_new = scanpath_new[:idxs[i]] + NewC + scanpath_new[idxs[i]+1:]
     return scanpath_new
 
 def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
@@ -117,7 +117,7 @@ def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
             scanpath_bs = parse_scanpath(densities)
             #print('scanpath length:',len(densities))
             flipping_candidates, idxs = find_flipping_candidates(densities, flipping_threshold, target_ranks)
-            scanpath_new = alter_scanpath(scanpath_bs, flipping_candidates)
+            scanpath_new = alter_scanpath(scanpath_bs, idxs, flipping_candidates)
             SS.append(nw_matching(scanpath_bs, scanpath_new))
     return SS
 
