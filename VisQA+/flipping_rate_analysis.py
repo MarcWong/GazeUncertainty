@@ -162,6 +162,8 @@ def aoi_proportion_in_fc(args, vis_type, fc_threshold):
                 flipping_candidates, _ = find_flipping_candidates(densities, fc_threshold, target_ranks=(2,))
                 # Count aoi pair occurrences in flipping candidates
                 for c in flipping_candidates:
+                    if len(c) < 2:
+                        continue
                     # These are the two aoi associated to the greatest two densities
                     (aoi_1, _), (aoi_2, _) = sorted(c, key=lambda x: x[1], reverse=True)[:2]
                     pair_id = aoi_1 + aoi_2
@@ -257,12 +259,12 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    plot_fcr_threshold(args, threshold_steps=10, fc_ranks=(2, 3, 4))
+    #plot_fcr_threshold(args, threshold_steps=10, fc_ranks=(2, 3, 4))
 
     # TODO Find "reasonable" threshold
-    plot_fcr_distribution(args, vis_types, threshold=0.3, fc_ranks=(2, 3, 4))
+    #plot_fcr_distribution(args, vis_types, threshold=0.3, fc_ranks=(2, 3, 4))
 
-    plot_fc_proportion_on_first(args, threshold_steps=10, fc_ranks=(2, 3, 4))
+    #plot_fc_proportion_on_first(args, threshold_steps=10, fc_ranks=(2, 3, 4))
 
     # Currently we analysis on FC of rank 2, i.e. analysing aoi pairs occuring in densities.
-    plot_aoi_proportion_in_fc(args, vis_types, threshold=0.3)
+    plot_aoi_proportion_in_fc(args, vis_types, threshold=0.7)
