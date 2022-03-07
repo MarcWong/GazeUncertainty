@@ -4,6 +4,7 @@ Requires precomputed densities for each visualization (Step 4-5), which can be o
 """
 
 import numpy as np
+import pandas as pd
 import os.path
 import argparse
 import json
@@ -106,6 +107,31 @@ def alter_scanpath(scanpath_bs, idxs, flipping_candidates):
         scanpath_new = scanpath_new[:idxs[i]] + NewC + scanpath_new[idxs[i]+1:]
     return scanpath_new
 
+def SS_of_vis_groups(densities_dir, flipping_threshold, target_ranks):
+    """
+    Returns rate of flipping candidates of all recordings associated to given visualization.
+    """
+    SS_good = []
+    SS_bad = []
+
+    df_img_excluded = pd.read_csv(
+        'dataset/excluded.csv')
+
+    for fix_path in glob(os.path.join(densities_dir, '*.json')):
+        with open(fix_path, 'r') as f:
+            densities = parse_densities(f)
+            scanpath_bs = parse_scanpath(densities)
+            #print('scanpath length:',len(densities))
+            flipping_candidates, idxs = find_flipping_candidates(densities, flipping_threshold, target_ranks)
+            scanpath_new = alter_scanpath(scanpath_bs, idxs, flipping_candidates)
+            subject_id = fix_path.split('/')[-1].strip('.json')
+            if subject_id in df_img_excluded['subject_id'].values:
+                SS_bad.append(nw_matching(scanpath_bs, scanpath_new))  
+            else:
+                SS_good.append(nw_matching(scanpath_bs, scanpath_new))
+    return SS_good, SS_bad
+
+
 def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
     """
     Returns rate of flipping candidates of all recordings associated to given visualization.
@@ -123,24 +149,36 @@ def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 
 def type_analysis(args, vis_types, fc_threshold):
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
     type2rate = {vt: [] for vt in vis_types}
+    type2ratebad = {vt: [] for vt in vis_types}
 
     for n, vis_type in enumerate(args['vis_types']):
         for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
-            rate = SS_of_vis(vis_densities, fc_threshold, target_ranks=(2,))
+            rate, rate_bad = SS_of_vis_groups(vis_densities, fc_threshold, target_ranks=(2,))
             type2rate[vis_type].extend(rate)
+            type2ratebad[vis_type].extend(rate_bad)
 
-    sns.boxplot(data=list(type2rate.values()), showfliers=False)
+    sns.boxplot(data=list(type2rate.values()), showfliers=False, ax=ax1)
+    sns.swarmplot(data=list(type2rate.values()), color=".25", ax=ax1)
+    sns.boxplot(data=list(type2ratebad.values()), showfliers=False, ax=ax2)
+    sns.swarmplot(data=list(type2ratebad.values()), color=".25", ax=ax2)
 
-    ax.set_xticklabels(type2rate.keys())
-    ax.set_xticks(np.arange(len(type2rate)))
-    ax.set_ylabel('Sequence Score')
-    ax.set_xticklabels(type2rate.keys())
+    ax1.set_xticklabels(type2rate.keys())
+    ax1.set_xticks(np.arange(len(type2rate)))
+    ax1.set_xlabel('Low calibration error')
+    ax1.set_ylabel('Sequence Score')
+    ax1.set(ylim=(0.4,1))
+
+    ax2.set_xticklabels(type2ratebad.keys())
+    ax2.set_xticks(np.arange(len(type2ratebad)))
+    ax2.set_xlabel('High calibration error')
+    ax2.set(ylim=(0.4,1))
     plt.show()
 
 if __name__ == '__main__':
-    VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
+    VIS_TYPES = ('bar', 'line', 'scatter')
+    #VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
     sns.set_theme(style="white", font_scale=2)
 
     parser = argparse.ArgumentParser()
@@ -149,4 +187,4 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    type_analysis(args, vis_types, 0.2)
+    type_analysis(args, vis_types, 0.14)
