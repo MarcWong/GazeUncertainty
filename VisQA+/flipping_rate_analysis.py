@@ -106,26 +106,23 @@ def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
 
 def plot_fcr_threshold(args, threshold_steps, fc_ranks):
     thresholds = np.linspace(0, 1, threshold_steps)
-    type2fcr = {vt: [] for vt in args['vis_types']}
+    all_fcr = []
 
     for fc_threshold in tqdm(thresholds):
         fcr = []
-        for vis_type in args['vis_types']:
-            for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
-                # FCR of each subject
-                vis_fcr = fcr_of_vis(vis_densities, fc_threshold, target_ranks=fc_ranks)
-                # For each vis, we calculate the average FCR among all subjects.
-                avg_fcr = np.mean(vis_fcr)
-                fcr.append(avg_fcr)
-            # For each type, we calculate the average FCR among all vis
-            type2fcr[vis_type].append(np.mean(fcr))
+        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', '*', '*')):
+            # FCR of each subject
+            vis_fcr = fcr_of_vis(vis_densities, fc_threshold, target_ranks=fc_ranks)
+            # For each vis, we calculate the average FCR among all subjects.
+            avg_fcr = np.mean(vis_fcr)
+            fcr.append(avg_fcr)
+        # For each type, we calculate the average FCR among all vis
+        all_fcr.append(np.mean(fcr))
 
-    for vis_type in args['vis_types']:
-        plt.plot(thresholds, type2fcr[vis_type], label=vis_type)
+    plt.plot(thresholds, all_fcr)
 
     plt.xlabel('Flipping candidate threshold')
     plt.ylabel('Flipping candidate rate')
-    plt.legend()
     plt.show()
 
 
@@ -259,12 +256,12 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    #plot_fcr_threshold(args, threshold_steps=10, fc_ranks=(2, 3, 4))
+    #plot_fcr_threshold(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # TODO Find "reasonable" threshold
     #plot_fcr_distribution(args, vis_types, threshold=0.3, fc_ranks=(2, 3, 4))
 
-    #plot_fc_proportion_on_first(args, threshold_steps=10, fc_ranks=(2, 3, 4))
+    #plot_fc_proportion_on_first(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # Currently we analysis on FC of rank 2, i.e. analysing aoi pairs occuring in densities.
     plot_aoi_proportion_in_fc(args, vis_types, threshold=0.7)
