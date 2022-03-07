@@ -37,13 +37,13 @@ def draw_bounding_boxes(im, element_labels):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--element_labels_dir", type=str, default=None)
-    parser.add_argument("--images_dir", type=str, default=None)
+    parser.add_argument("--element_labels_dir", type=str, required=True)
+    parser.add_argument("--images_dir", type=str, required=True)
     args = vars(parser.parse_args())
 
     makedirs(os.path.join(os.path.dirname(args['images_dir']), 'src_bb'), exist_ok=True)
 
-    for img_path in glob(os.path.join(args['images_dir'], '*.png')):
+    for img_path in glob(os.path.join(args['images_dir'], '*.*')):
         vis = os.path.basename(img_path)[:-4]
         element_labels = parse_element_label(os.path.join(args['element_labels_dir'], vis))
         element_labels = combine_rows(element_labels)
@@ -54,12 +54,10 @@ if __name__ == '__main__':
             draw_bounding_boxes(im, element_labels)
             im = np.array(im)
 
-            """
             overlap = get_overlap(width, height, element_labels)
             overlap = overlap.astype(float) * .5
 
             im[:, :, 1] = im[:, :, 1] * (1 - overlap)
             im[:, :, 2] = im[:, :, 2] * (1 - overlap)
-            """
 
             plt.imsave(os.path.join(os.path.dirname(args['images_dir']), 'src_bb', os.path.basename(img_path)), im)
