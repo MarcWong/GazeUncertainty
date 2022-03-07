@@ -13,6 +13,7 @@ import pandas as pd
 
 from glob import glob
 from tqdm import tqdm
+from scipy.stats import ttest_ind
 
 
 def dist_hellinger(densities, N):
@@ -32,14 +33,18 @@ def dist_hellinger(densities, N):
 
 def dist_total_variation(densities, N):
     uniform = 1 / N
-    return sum([abs(d - uniform) for _, d in densities])
+    #return sum([abs(d - uniform) for _, d in densities])
+    t1 = sum([abs(d - uniform) for _, d in densities])
+    t2 = max(1 - sum([d for _, d in densities]), 0)
+
+    return (t1 + t2)
 
 
 def parse_densities(file):
     return list(json.load(file).values())
 
 
-def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_hellinger):
+def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_total_variation):
     """
     Flipping candidates score has the following interpretation:
     ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
@@ -137,7 +142,16 @@ def plot_fcr_distribution(args, vis_types, threshold, fc_ranks):
             # For each vis, we calculate the average FCR among all subjects.
             avg_fcr = np.mean(vis_fcr)
             type2fcr[vis_type].append(avg_fcr)
-    sns.boxplot(data=list(type2fcr.values()), showfliers=False)
+    
+    out_bar_scatter = ttest_ind(type2fcr['bar'], type2fcr['scatter'], equal_var=False)
+    out_bar_line = ttest_ind(type2fcr['bar'], type2fcr['line'], equal_var=False)
+    out_line_scatter = ttest_ind(type2fcr['line'], type2fcr['scatter'], equal_var=False)
+
+    print(f'bar, scatter: {out_bar_scatter}')
+    print(f'bar, line: {out_bar_line}')
+    print(f'line, scatter: {out_line_scatter}')
+    sns.boxplot(data=list(type2fcr.values()))
+    sns.swarmplot(data=list(type2fcr.values()), color=".25")
 
     ax.set_xticklabels(type2fcr.keys())
     ax.set_xticks(np.arange(len(type2fcr)))
@@ -207,10 +221,18 @@ def plot_aoi_proportion_in_fc(args, vis_types, threshold):
     plt.show()
 
 
+def merge_prob_by_aoi(flipping_candidates):
+    merged_prob = {}
+    for fpc in flipping_candidates:
+        merged_prob[fpc[0]] = merged_prob.get(fpc[0], 0) + fpc[1]
+    return sorted(merged_prob.items(), key=lambda kv:(kv[1], kv[0]))
+
+
 def fc_proportion_on_first(args, fc_threshold, fc_ranks):
     """
     Calculates the propertion of first fixations being flipping candidates
     """
+    scanpath = []
     type2ratio = {vt: [] for vt in args['vis_types']}
     for vis_type in args['vis_types']:
         for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
@@ -218,11 +240,17 @@ def fc_proportion_on_first(args, fc_threshold, fc_ranks):
             for path in glob(os.path.join(vis_densities, '*.json')):
                 cnt_subjects += 1
                 with open(path, 'r') as f:
-                    densities = parse_densities(f)
-                    _, idxs = find_flipping_candidates(densities, fc_threshold, fc_ranks)
-                    # Check if the density associated to the first fixation is a flipping candidate
-                    if 0 in idxs:
-                        cnt_first += 1
+                    fixation_densities = parse_densities(f)
+                    flipping_candidates, idxs = find_flipping_candidates(fixation_densities, fc_threshold, fc_ranks)
+                    merged = merge_prob_by_aoi(flipping_candidates)
+
+                    if len(merged) < 2:
+                        aoi_1, aoi_2 = merged[-1][0], merged[-1][0]
+                    else:
+                        aoi_1, aoi_2 = merged[-1][0], merged[-2][0]
+
+                    scanpath.ap
+
             # Propertion of first fixations being flipping candidates on vis
             ratio_first = cnt_first / cnt_subjects
             type2ratio[vis_type].append(ratio_first)
@@ -259,9 +287,9 @@ if __name__ == '__main__':
     #plot_fcr_threshold(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # TODO Find "reasonable" threshold
-    #plot_fcr_distribution(args, vis_types, threshold=0.3, fc_ranks=(2, 3, 4))
+    plot_fcr_distribution(args, vis_types, threshold=0.5, fc_ranks=(2, 3, 4))
 
     #plot_fc_proportion_on_first(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # Currently we analysis on FC of rank 2, i.e. analysing aoi pairs occuring in densities.
-    plot_aoi_proportion_in_fc(args, vis_types, threshold=0.7)
+    plot_aoi_proportion_in_fc(args, vis_types, threshold=0.5)
