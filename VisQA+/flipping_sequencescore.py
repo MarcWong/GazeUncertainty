@@ -1,5 +1,5 @@
 """
-Step 6: Calculates flipping candidate rate (fcr) of each visualization type
+Step 7: Altering flipping candidate and calculate the Sequence Score for each visualization type
 Requires precomputed densities for each visualization (Step 4-5), which can be obtained from 'kde_densities.py'
 """
 
@@ -7,41 +7,13 @@ import numpy as np
 import pandas as pd
 import os.path
 import argparse
-import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from glob import glob
 from tqdm import tqdm
-from util import nw_matching
+from util import nw_matching, parse_densities, find_flipping_candidates
 from scipy.stats import ttest_ind
-
-
-def dist_hellinger(densities, N):
-    """
-    Hellinger distance between uniform distribution of fixed N and the given densities.
-    See: https://en.wikipedia.org/wiki/Hellinger_distance#Properties
-    """
-    uniform = 1 / N
-    normalizing = np.sqrt(1 - np.sqrt(.5))
-
-    bhatt_coeff = sum([np.sqrt(d * uniform) for _, d in densities])
-    bhatt_coeff = np.clip(bhatt_coeff, 0, 1)
-
-    dist = np.sqrt(1 - bhatt_coeff)
-    return dist / normalizing
-
-
-def dist_total_variation(densities, N):
-    uniform = 1 / N
-    #return sum([abs(d - uniform) for _, d in densities])
-    t1 = sum([abs(d - uniform) for _, d in densities])
-    t2 = max(1 - sum([d for _, d in densities]), 0)
-
-    return (t1 + t2)
-
-def parse_densities(file):
-    return json.load(file).values()
 
 def parse_scanpath(densities):
     label = ''
@@ -55,44 +27,6 @@ def parse_scanpath(densities):
                 highest_prob = candidate[1] 
         label += tmplabel
     return label
-
-def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_total_variation):
-    """
-    Flipping candidates score has the following interpretation:
-    ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
-    ~> 1: The density distribution is close to uniform, i.e. the fixation covers at least two AOI to a very similar extent.
-
-    NOTE: Is there off-the-shelf solution for this? There might be better / more elegant way to compute this.
-    """
-    N = len(densities)
-    copy = list(densities)
-
-    # Add dummy zeros when rank is larger than number density entries.
-    if r > N:
-        copy.extend([('0', 0)] * (r - N))
-
-    copy.sort(reverse=True, key=lambda x: x[1])
-    dist = dist_fn(copy[:r], r)
-    return 1. - dist
-
-
-def find_flipping_candidates(fixation_densities, threshold, target_ranks=(2, 3, 4)):
-    """
-    Perform KDE analysis steps to find flipping candidates.
-    Output can be verified with show_density_overlay=True
-    """
-    flipping_candidates = []
-    idxs = []
-    for idx, densities in enumerate(fixation_densities):
-        # Step 6: check for which segments the distribution overlays at least two AOIs to a very similar extent (the flipping candidates)
-        rank_scores = {2: flipping_candidate_score_of_rank(densities, r=2),
-                       3: flipping_candidate_score_of_rank(densities, r=3),
-                       4: flipping_candidate_score_of_rank(densities, r=4)}
-        rank_of_max = max(rank_scores, key=rank_scores.get)
-        if rank_scores[rank_of_max] > threshold and rank_of_max in target_ranks:
-            flipping_candidates.append((densities))
-            idxs.append((idx))
-    return flipping_candidates, idxs
 
 def alter_candidate(flipping_candidates):
     merged_prob = {}

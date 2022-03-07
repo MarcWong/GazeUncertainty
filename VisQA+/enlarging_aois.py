@@ -20,8 +20,6 @@ from util import compute_scale_factor
 
 #0.05
 #ENLARGE_PX = 2.7
-#0.075
-#ENLARGE_PX = 4.05
 #0.1
 #ENLARGE_PX = 5.4
 #0.15
@@ -46,11 +44,6 @@ from util import compute_scale_factor
 #ENLARGE_PX = 48.6
 #1 degree
 ENLARGE_PX = 54
-#ENLARGE_PX = 67.5
-#ENLARGE_PX = 81
-#ENLARGE_PX = 94.5
-#2 degrees
-#ENLARGE_PX = 108
 
 
 # shape of polygon: [N, 2]
@@ -133,10 +126,9 @@ def enlargeAOI(element_labels, groupID, im, enlargeL:float):
                 df = df.append({'id': row[0], 'desc': row[1], 'x': row[3][i][0], 'y': row[3][i][1]}, ignore_index=True)
             continue
 
-        poly = np.array(row[1][3])
-        perimeter = Perimeter(poly)
-        area = Area(poly)
-
+        poly = np.array(row[3])
+        #perimeter = Perimeter(poly)
+        #area = Area(poly)
 
         expansion_poly = shrink_polygon(poly, realEnlargeL, im.size, fixWidth=True)
         #print(perimeter, area, expansion_poly)
