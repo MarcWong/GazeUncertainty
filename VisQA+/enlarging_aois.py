@@ -123,14 +123,14 @@ def enlargeAOI(element_labels, groupID, im, enlargeL:float):
 
     df = pd.DataFrame(columns=['id', 'desc', 'x', 'y'])
 
-    for row in element_labels.iterrows():
-        #row[1][0] id
-        #row[1][1] desc
-        #row[1][2] file
-        #row[1][3] coordinates
-        if np.shape(np.array(row[1][3]))[0] < 3:
-            for i in range(np.shape(np.array(row[1][3]))[0]):
-                df = df.append({'id': row[1][0], 'desc': row[1][1], 'x': row[1][3][i][0], 'y': row[1][3][i][1]}, ignore_index=True)
+    for id, row in element_labels.iterrows():
+        #row[0] id
+        #row[1] desc
+        #row[2] file
+        #row[3] coordinates
+        if np.shape(np.array(row[3]))[0] < 3:
+            for i in range(np.shape(np.array(row[3]))[0]):
+                df = df.append({'id': row[0], 'desc': row[1], 'x': row[3][i][0], 'y': row[3][i][1]}, ignore_index=True)
             continue
 
         poly = np.array(row[1][3])
