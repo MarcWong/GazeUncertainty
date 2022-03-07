@@ -14,6 +14,7 @@ import seaborn as sns
 from glob import glob
 from tqdm import tqdm
 from util import nw_matching
+from scipy.stats import ttest_ind
 
 
 def dist_hellinger(densities, N):
@@ -167,6 +168,17 @@ def type_analysis(args, vis_types, fc_threshold):
     sns.swarmplot(data=list(type2rate.values()), color=".25", ax=ax1)
     sns.boxplot(data=list(type2ratebad.values()), showfliers=False, ax=ax2)
     sns.swarmplot(data=list(type2ratebad.values()), color=".25", ax=ax2)
+
+    print(len(type2rate['bar']), len(type2ratebad['bar']))
+    print(len(type2rate['line']), len(type2ratebad['line']))
+    print(len(type2rate['scatter']), len(type2ratebad['scatter']))
+    out_bar = ttest_ind(type2rate['bar'], type2ratebad['bar'], equal_var=False)
+    out_line = ttest_ind(type2rate['line'], type2ratebad['line'], equal_var=False)
+    out_scatter = ttest_ind(type2rate['scatter'], type2ratebad['scatter'], equal_var=False)
+
+    print(f'bar: {out_bar}')
+    print(f'line: {out_line}')
+    print(f'scatter: {out_scatter}')
 
     ax1.set_xticklabels(type2rate.keys())
     ax1.set_xticks(np.arange(len(type2rate)))
