@@ -33,7 +33,11 @@ def dist_hellinger(densities, N):
 
 def dist_total_variation(densities, N):
     uniform = 1 / N
-    return sum([abs(d - uniform) for _, d in densities])
+    #return sum([abs(d - uniform) for _, d in densities])
+    t1 = sum([abs(d - uniform) for _, d in densities])
+    t2 = max(1 - sum([d for _, d in densities]), 0)
+
+    return (t1 + t2)
 
 def parse_densities(file):
     return json.load(file).values()
@@ -51,7 +55,7 @@ def parse_scanpath(densities):
         label += tmplabel
     return label
 
-def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_hellinger):
+def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_total_variation):
     """
     Flipping candidates score has the following interpretation:
     ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
@@ -187,4 +191,4 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    type_analysis(args, vis_types, 0.14)
+    type_analysis(args, vis_types, 0.2)
