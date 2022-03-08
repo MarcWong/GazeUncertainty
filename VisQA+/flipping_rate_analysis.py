@@ -99,7 +99,7 @@ def fcr_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
     rates = []
-    for densities_dir in glob(os.path.join(dataset_dir, 'densitiesByVis', vis_type, '*')):
+    for densities_dir in glob(os.path.join(dataset_dir, 'densitiesByVis_B27', vis_type, '*')):
         #Flipping candidate ratios of all recordings associated to vis
         fc_rate = fcr_of_vis(densities_dir, flipping_threshold, target_ranks)
         if len(fc_rate) > 0:
@@ -111,23 +111,30 @@ def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
 
 def plot_fcr_threshold(args, threshold_steps, fc_ranks):
     thresholds = np.linspace(0, 1, threshold_steps)
-    all_fcr = []
 
-    for fc_threshold in tqdm(thresholds):
-        fcr = []
-        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', '*', '*')):
-            # FCR of each subject
-            vis_fcr = fcr_of_vis(vis_densities, fc_threshold, target_ranks=fc_ranks)
-            # For each vis, we calculate the average FCR among all subjects.
-            avg_fcr = np.mean(vis_fcr)
-            fcr.append(avg_fcr)
-        # For each type, we calculate the average FCR among all vis
-        all_fcr.append(np.mean(fcr))
+    def plot_from_densities(density_dir, label):
+        all_fcr = []
+        for fc_threshold in tqdm(thresholds):
+            fcr = []
+            for vis_densities in glob(os.path.join(args['dataset_dir'], density_dir, '*', '*')):
+                # FCR of each subject
+                vis_fcr = fcr_of_vis(vis_densities, fc_threshold, target_ranks=fc_ranks)
+                # For each vis, we calculate the average FCR among all subjects.
+                avg_fcr = np.mean(vis_fcr)
+                fcr.append(avg_fcr)
+            # For each type, we calculate the average FCR among all vis
+            all_fcr.append(np.mean(fcr))
+        plt.plot(thresholds, all_fcr, label=label)
 
-    plt.plot(thresholds, all_fcr)
+
+    plot_from_densities('densitiesByVis_B27', '2.7')
+    plot_from_densities('densitiesByVis_B54', '5.4')
+    plot_from_densities('densitiesByVis_B135', '13.5')
+    plot_from_densities('densitiesByVis_B270', '27.0')
 
     plt.xlabel('Flipping candidate threshold')
     plt.ylabel('Flipping candidate rate')
+    plt.legend()
     plt.show()
 
 
@@ -136,7 +143,7 @@ def plot_fcr_distribution(args, vis_types, threshold, fc_ranks):
     type2fcr = {vt: [] for vt in vis_types}
 
     for n, vis_type in enumerate(args['vis_types']):
-        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
+        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
             # FCR of each subject
             vis_fcr = fcr_of_vis(vis_densities, threshold, target_ranks=fc_ranks)
             # For each vis, we calculate the average FCR among all subjects.
@@ -165,7 +172,7 @@ def aoi_proportion_in_fc(args, vis_type, fc_threshold):
     Calculates the proportion of aoi pairs occuring in flipping candidates of rank 2.
     """
     pair2ratio = {}
-    for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
+    for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
         for path in glob(os.path.join(vis_densities, '*.json')):
             with open(path, 'r') as f:
                 pair2count = {}
@@ -235,7 +242,7 @@ def fc_proportion_on_first(args, fc_threshold, fc_ranks):
     scanpath = []
     type2ratio = {vt: [] for vt in args['vis_types']}
     for vis_type in args['vis_types']:
-        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
+        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
             cnt_subjects = cnt_first = 0
             for path in glob(os.path.join(vis_densities, '*.json')):
                 cnt_subjects += 1
@@ -284,12 +291,12 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    #plot_fcr_threshold(args, threshold_steps=100, fc_ranks=(2, 3, 4))
+    plot_fcr_threshold(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # TODO Find "reasonable" threshold
-    plot_fcr_distribution(args, vis_types, threshold=0.5, fc_ranks=(2, 3, 4))
+    #plot_fcr_distribution(args, vis_types, threshold=0.5, fc_ranks=(2, 3, 4))
 
     #plot_fc_proportion_on_first(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
     # Currently we analysis on FC of rank 2, i.e. analysing aoi pairs occuring in densities.
-    plot_aoi_proportion_in_fc(args, vis_types, threshold=0.5)
+    #plot_aoi_proportion_in_fc(args, vis_types, threshold=0.5)
