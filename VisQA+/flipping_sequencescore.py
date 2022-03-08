@@ -1,5 +1,5 @@
 """
-Step 6: Calculates flipping candidate rate (fcr) of each visualization type
+Step 7: Altering flipping candidate and calculate the Sequence Score for each visualization type
 Requires precomputed densities for each visualization (Step 4-5), which can be obtained from 'kde_densities.py'
 """
 
@@ -7,36 +7,13 @@ import numpy as np
 import pandas as pd
 import os.path
 import argparse
-import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from glob import glob
 from tqdm import tqdm
-from util import nw_matching
-
-
-def dist_hellinger(densities, N):
-    """
-    Hellinger distance between uniform distribution of fixed N and the given densities.
-    See: https://en.wikipedia.org/wiki/Hellinger_distance#Properties
-    """
-    uniform = 1 / N
-    normalizing = np.sqrt(1 - np.sqrt(.5))
-
-    bhatt_coeff = sum([np.sqrt(d * uniform) for _, d in densities])
-    bhatt_coeff = np.clip(bhatt_coeff, 0, 1)
-
-    dist = np.sqrt(1 - bhatt_coeff)
-    return dist / normalizing
-
-
-def dist_total_variation(densities, N):
-    uniform = 1 / N
-    return sum([abs(d - uniform) for _, d in densities])
-
-def parse_densities(file):
-    return json.load(file).values()
+from util import nw_matching, parse_densities, find_flipping_candidates
+from scipy.stats import ttest_ind
 
 def parse_scanpath(densities):
     label = ''
@@ -50,44 +27,6 @@ def parse_scanpath(densities):
                 highest_prob = candidate[1] 
         label += tmplabel
     return label
-
-def flipping_candidate_score_of_rank(densities, r, dist_fn=dist_hellinger):
-    """
-    Flipping candidates score has the following interpretation:
-    ~> 0: The density distribution is peaked, i.e. the fixation mostly covers just a single AOI.
-    ~> 1: The density distribution is close to uniform, i.e. the fixation covers at least two AOI to a very similar extent.
-
-    NOTE: Is there off-the-shelf solution for this? There might be better / more elegant way to compute this.
-    """
-    N = len(densities)
-    copy = list(densities)
-
-    # Add dummy zeros when rank is larger than number density entries.
-    if r > N:
-        copy.extend([('0', 0)] * (r - N))
-
-    copy.sort(reverse=True, key=lambda x: x[1])
-    dist = dist_fn(copy[:r], r)
-    return 1. - dist
-
-
-def find_flipping_candidates(fixation_densities, threshold, target_ranks=(2, 3, 4)):
-    """
-    Perform KDE analysis steps to find flipping candidates.
-    Output can be verified with show_density_overlay=True
-    """
-    flipping_candidates = []
-    idxs = []
-    for idx, densities in enumerate(fixation_densities):
-        # Step 6: check for which segments the distribution overlays at least two AOIs to a very similar extent (the flipping candidates)
-        rank_scores = {2: flipping_candidate_score_of_rank(densities, r=2),
-                       3: flipping_candidate_score_of_rank(densities, r=3),
-                       4: flipping_candidate_score_of_rank(densities, r=4)}
-        rank_of_max = max(rank_scores, key=rank_scores.get)
-        if rank_scores[rank_of_max] > threshold and rank_of_max in target_ranks:
-            flipping_candidates.append((densities))
-            idxs.append((idx))
-    return flipping_candidates, idxs
 
 def alter_candidate(flipping_candidates):
     merged_prob = {}
@@ -164,6 +103,17 @@ def type_analysis(args, vis_types, fc_threshold):
     sns.boxplot(data=list(type2ratebad.values()), showfliers=False, ax=ax2)
     sns.swarmplot(data=list(type2ratebad.values()), color=".25", ax=ax2)
 
+    print(len(type2rate['bar']), len(type2ratebad['bar']))
+    print(len(type2rate['line']), len(type2ratebad['line']))
+    print(len(type2rate['scatter']), len(type2ratebad['scatter']))
+    out_bar = ttest_ind(type2rate['bar'], type2ratebad['bar'], equal_var=False)
+    out_line = ttest_ind(type2rate['line'], type2ratebad['line'], equal_var=False)
+    out_scatter = ttest_ind(type2rate['scatter'], type2ratebad['scatter'], equal_var=False)
+
+    print(f'bar: {out_bar}')
+    print(f'line: {out_line}')
+    print(f'scatter: {out_scatter}')
+
     ax1.set_xticklabels(type2rate.keys())
     ax1.set_xticks(np.arange(len(type2rate)))
     ax1.set_xlabel('Low calibration error')
@@ -187,4 +137,4 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     vis_types = set(args['vis_types'])
 
-    type_analysis(args, vis_types, 0.14)
+    type_analysis(args, vis_types, 0.2)
