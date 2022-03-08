@@ -88,7 +88,7 @@ def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 
 def type_analysis(args, vis_types, fc_threshold):
-    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
+    fig, ax = plt.subplots(nrows=1, ncols=2)
     type2rate = {vt: [] for vt in vis_types}
     type2ratebad = {vt: [] for vt in vis_types}
 
@@ -98,36 +98,47 @@ def type_analysis(args, vis_types, fc_threshold):
             type2rate[vis_type].extend(rate)
             type2ratebad[vis_type].extend(rate_bad)
 
-    sns.boxplot(data=list(type2rate.values()), showfliers=False, ax=ax1)
-    sns.swarmplot(data=list(type2rate.values()), color=".25", ax=ax1)
-    sns.boxplot(data=list(type2ratebad.values()), showfliers=False, ax=ax2)
-    sns.swarmplot(data=list(type2ratebad.values()), color=".25", ax=ax2)
+    for axis in ax:
+        axis.set(ylim=(0.4,1.02))
+        axis.axhline(y=0.5, color='#BBBBBB', linestyle='--')
+        axis.axhline(y=0.6, color='#BBBBBB', linestyle='--')
+        axis.axhline(y=0.7, color='#BBBBBB', linestyle='--')
+        axis.axhline(y=0.8, color='#BBBBBB', linestyle='--')
+        axis.axhline(y=0.9, color='#BBBBBB', linestyle='--')
+        axis.axhline(y=1.0, color='#BBBBBB', linestyle='--')
+
+
+    sns.boxplot(data=list(type2rate.values()), showfliers=False, ax=ax[0])
+    sns.swarmplot(data=list(type2rate.values()), color=".25", ax=ax[0])
+    sns.boxplot(data=list(type2ratebad.values()), showfliers=False, ax=ax[1])
+    sns.swarmplot(data=list(type2ratebad.values()), color=".25", ax=ax[1])
 
     print(len(type2rate['bar']), len(type2ratebad['bar']))
     print(len(type2rate['line']), len(type2ratebad['line']))
     print(len(type2rate['scatter']), len(type2ratebad['scatter']))
+    print(len(type2rate['pie']), len(type2ratebad['pie']))
     out_bar = ttest_ind(type2rate['bar'], type2ratebad['bar'], equal_var=False)
     out_line = ttest_ind(type2rate['line'], type2ratebad['line'], equal_var=False)
     out_scatter = ttest_ind(type2rate['scatter'], type2ratebad['scatter'], equal_var=False)
+    out_pie = ttest_ind(type2rate['pie'], type2ratebad['pie'], equal_var=False)
 
     print(f'bar: {out_bar}')
     print(f'line: {out_line}')
     print(f'scatter: {out_scatter}')
+    print(f'pie: {out_pie}')
 
-    ax1.set_xticklabels(type2rate.keys())
-    ax1.set_xticks(np.arange(len(type2rate)))
-    ax1.set_xlabel('Low calibration error')
-    ax1.set_ylabel('Sequence Score')
-    ax1.set(ylim=(0.4,1))
+    ax[0].set_xticklabels(type2rate.keys())
+    ax[0].set_xticks(np.arange(len(type2rate)))
+    ax[0].set_xlabel('Low calibration error')
+    ax[1].set_xticklabels(type2ratebad.keys())
+    ax[1].set_xticks(np.arange(len(type2ratebad)))
+    ax[1].set_xlabel('High calibration error')
+    ax[0].set_ylabel('Sequence Score')
 
-    ax2.set_xticklabels(type2ratebad.keys())
-    ax2.set_xticks(np.arange(len(type2ratebad)))
-    ax2.set_xlabel('High calibration error')
-    ax2.set(ylim=(0.4,1))
     plt.show()
 
 if __name__ == '__main__':
-    VIS_TYPES = ('bar', 'line', 'scatter')
+    VIS_TYPES = ('bar', 'line', 'scatter', 'pie')
     #VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
     sns.set_theme(style="white", font_scale=2)
 

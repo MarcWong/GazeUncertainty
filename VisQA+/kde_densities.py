@@ -71,20 +71,20 @@ def element_label_densities(kde, element_labels, size):
     densities = []
     width, height = size
 
-    for row in element_labels.iterrows():
-        #row[1][0] id
-        #row[1][1] desc
-        #row[1][2] file
-        #row[1][3] coordinates
+    for id, row in element_labels.iterrows():
+        #row[0] id
+        #row[1] desc
+        #row[2] file
+        #row[3] coordinates
         # Polygon expects Y,X
         rr, cc = polygon(
-            np.array(row[1][3])[:,1],
-            np.array(row[1][3])[:,0],
+            np.array(row[3])[:,1],
+            np.array(row[3])[:,0],
             (height, width))
         # KDE expects X,Y
         in_poly = np.vstack((cc, rr)).T
         acc_density = np.exp(kde.score_samples(in_poly)).sum()
-        label = convert_desc(row[1][1])
+        label = convert_desc(row[1])
         densities.append((label, acc_density))
     return densities
 
