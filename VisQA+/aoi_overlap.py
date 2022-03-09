@@ -39,7 +39,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--element_labels_dir", type=str, required=True)
     parser.add_argument("--images_dir", type=str, required=True)
+    parser.add_argument("--draw_bounding_box", action='store_true')
+    parser.add_argument("--draw_overlap", action='store_true')
     args = vars(parser.parse_args())
+
+    if not args['draw_bounding_box'] and not args['draw_bounding_box']:
+        print('Nothing to do!')
+        exit()
 
     makedirs(os.path.join(os.path.dirname(args['images_dir']), 'src_bb'), exist_ok=True)
 
@@ -51,13 +57,16 @@ if __name__ == '__main__':
         with Image.open(img_path) as im:
             width, height = im.size
 
-            draw_bounding_boxes(im, element_labels)
+            if args['draw_bounding_box']:
+                draw_bounding_boxes(im, element_labels)
+
             im = np.array(im)
 
-            overlap = get_overlap(width, height, element_labels)
-            overlap = overlap.astype(float) * .5
+            if args['draw_overlap']:
+                overlap = get_overlap(width, height, element_labels)
+                overlap = overlap.astype(float) * .5
 
-            im[:, :, 1] = im[:, :, 1] * (1 - overlap)
-            im[:, :, 2] = im[:, :, 2] * (1 - overlap)
+                im[:, :, 1] = im[:, :, 1] * (1 - overlap)
+                im[:, :, 2] = im[:, :, 2] * (1 - overlap)
 
             plt.imsave(os.path.join(os.path.dirname(args['images_dir']), 'src_bb', os.path.basename(img_path)), im)
