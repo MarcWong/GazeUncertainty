@@ -15,6 +15,9 @@ from tqdm import tqdm
 from util import parse_densities, find_flipping_candidates
 from scipy.stats import ttest_ind
 
+from matplotlib import rcParams
+rcParams.update({'figure.autolayout': True})
+
 
 def fcr_of_vis(densities_dir, flipping_threshold, target_ranks):
     """
@@ -32,7 +35,7 @@ def fcr_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 def fcr_of_vis_type(vis_type, dataset_dir, flipping_threshold, target_ranks):
     rates = []
-    for densities_dir in glob(os.path.join(dataset_dir, 'densitiesByVis_B27', vis_type, '*')):
+    for densities_dir in glob(os.path.join(dataset_dir, 'densitiesByVis', vis_type, '*')):
         #Flipping candidate ratios of all recordings associated to vis
         fc_rate = fcr_of_vis(densities_dir, flipping_threshold, target_ranks)
         if len(fc_rate) > 0:
@@ -60,13 +63,14 @@ def plot_fcr_threshold(args, threshold_steps, fc_ranks):
         plt.plot(thresholds, all_fcr, label=label)
 
 
-    plot_from_densities('densitiesByVis_B27', '2.7')
-    plot_from_densities('densitiesByVis_B54', '5.4')
-    plot_from_densities('densitiesByVis_B135', '13.5')
-    plot_from_densities('densitiesByVis_B270', '27.0')
+    plot_from_densities('densitiesByVis_B27', 'bandwidth of 0.05°')
+    plot_from_densities('densitiesByVis_B54', 'bandwidth of 0.10°')
+    plot_from_densities('densitiesByVis_B135', 'bandwidth of 0.25°')
+    plot_from_densities('densitiesByVis_B270', 'bandwidth of 0.50°')
 
     plt.xlabel('Flipping candidate threshold')
     plt.ylabel('Flipping candidate rate')
+    plt.grid(axis='y', linestyle='--')
     plt.legend()
     plt.show()
 
@@ -76,20 +80,21 @@ def plot_fcr_distribution(args, vis_types, threshold, fc_ranks):
     type2fcr = {vt: [] for vt in vis_types}
 
     for n, vis_type in enumerate(args['vis_types']):
-        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
+        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
             # FCR of each subject
             vis_fcr = fcr_of_vis(vis_densities, threshold, target_ranks=fc_ranks)
             # For each vis, we calculate the average FCR among all subjects.
             avg_fcr = np.mean(vis_fcr)
             type2fcr[vis_type].append(avg_fcr)
-    
-    out_bar_scatter = ttest_ind(type2fcr['bar'], type2fcr['scatter'], equal_var=False)
-    out_bar_line = ttest_ind(type2fcr['bar'], type2fcr['line'], equal_var=False)
-    out_line_scatter = ttest_ind(type2fcr['line'], type2fcr['scatter'], equal_var=False)
 
-    print(f'bar, scatter: {out_bar_scatter}')
-    print(f'bar, line: {out_bar_line}')
-    print(f'line, scatter: {out_line_scatter}')
+    vis_types = list(vis_types)
+    for i in range(len(vis_types)):
+        for j in range(i+1, len(vis_types)):
+            t1, t2 = vis_types[i], vis_types[j]
+            res_tt = ttest_ind(type2fcr[t1], type2fcr[t2], equal_var=False)
+            print(f'{t1}, {t2}: {res_tt}')
+
+
     sns.boxplot(data=list(type2fcr.values()))
     sns.swarmplot(data=list(type2fcr.values()), color=".25")
 
@@ -97,6 +102,7 @@ def plot_fcr_distribution(args, vis_types, threshold, fc_ranks):
     ax.set_xticks(np.arange(len(type2fcr)))
     ax.set_ylabel('Flipping candidate rate')
     ax.set_xticklabels(type2fcr.keys())
+    ax.grid(axis='y', linestyle='--')
     plt.show()
 
 
@@ -105,7 +111,7 @@ def aoi_proportion_in_fc(args, vis_type, fc_threshold):
     Calculates the proportion of aoi pairs occuring in flipping candidates of rank 2.
     """
     pair2ratio = {}
-    for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
+    for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
         for path in glob(os.path.join(vis_densities, '*.json')):
             with open(path, 'r') as f:
                 pair2count = {}
@@ -119,6 +125,10 @@ def aoi_proportion_in_fc(args, vis_type, fc_threshold):
                     (aoi_1, _), (aoi_2, _) = sorted(c, key=lambda x: x[1], reverse=True)[:2]
                     pair_id = aoi_1 + aoi_2
                     pair2count[pair_id] = pair2count.get(pair_id, 0) + 1
+                    if vis_type == 'line':
+                        print(path)
+                    #if pair_id in ('XD', 'DX'):
+                    #    print(path)
 
                 # Normalize the candidate counts to get ratio
                 for aoi_pair, cnt in pair2count.items():
@@ -157,7 +167,14 @@ def plot_aoi_proportion_in_fc(args, vis_types, threshold):
         axs.set_ylabel('')
         axs.set_title(vis_type)
         axs.set_ylim(0, 1)
+        if n > 0:
+            ax[n].set_yticklabels([]) 
+        else:
+            axs.set_ylabel('Relative occurrence')
+        ax[n].grid(axis='y', linestyle='--')
 
+
+    plt.subplots_adjust(wspace=.1, hspace=0)
     plt.show()
 
 
@@ -168,14 +185,12 @@ def merge_prob_by_aoi(flipping_candidates):
     return sorted(merged_prob.items(), key=lambda kv:(kv[1], kv[0]))
 
 
+"""
 def fc_proportion_on_first(args, fc_threshold, fc_ranks):
-    """
-    Calculates the propertion of first fixations being flipping candidates
-    """
     scanpath = []
     type2ratio = {vt: [] for vt in args['vis_types']}
     for vis_type in args['vis_types']:
-        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis_B27', vis_type, '*')):
+        for vis_densities in glob(os.path.join(args['dataset_dir'], 'densitiesByVis', vis_type, '*')):
             cnt_subjects = cnt_first = 0
             for path in glob(os.path.join(vis_densities, '*.json')):
                 cnt_subjects += 1
@@ -188,8 +203,6 @@ def fc_proportion_on_first(args, fc_threshold, fc_ranks):
                         aoi_1, aoi_2 = merged[-1][0], merged[-1][0]
                     else:
                         aoi_1, aoi_2 = merged[-1][0], merged[-2][0]
-
-                    scanpath.ap
 
             # Propertion of first fixations being flipping candidates on vis
             ratio_first = cnt_first / cnt_subjects
@@ -212,7 +225,7 @@ def plot_fc_proportion_on_first(args, threshold_steps, fc_ranks):
     plt.ylabel('Proportion of first fixations being flipping candidates')
     plt.legend()
     plt.show()
-
+"""
 
 if __name__ == '__main__':
     VIS_TYPES = ('bar', 'line', 'scatter', 'pie', 'table', 'other')
@@ -222,12 +235,11 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_dir", type=str, required=True)
     parser.add_argument("--vis_types", choices=VIS_TYPES, nargs='+', default=VIS_TYPES)
     args = vars(parser.parse_args())
-    vis_types = set(args['vis_types'])
+    vis_types = args['vis_types']
 
-    plot_fcr_threshold(args, threshold_steps=100, fc_ranks=(2, 3, 4))
+    #plot_fcr_threshold(args, threshold_steps=150, fc_ranks=(2, 3, 4))
 
-    # TODO Find "reasonable" threshold
-    #plot_fcr_distribution(args, vis_types, threshold=0.5, fc_ranks=(2, 3, 4))
+    plot_fcr_distribution(args, vis_types, threshold=0.5, fc_ranks=(2, 3, 4))
 
     #plot_fc_proportion_on_first(args, threshold_steps=100, fc_ranks=(2, 3, 4))
 
