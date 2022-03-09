@@ -1,0 +1,8 @@
+all rank 2
+
+
+scatter: green: f11=0.52 (SD) , red: f22=0.35 (SD)
+bar    : red: f15=0.21 (DX) , green: f23=0.57 (DX)
+line   : red: f34=0.14 (SL) , green: f19=0.60 (XL)
+pie    : red: f26=0.17 (LS)  , green: f11=0.75 (DD)
+

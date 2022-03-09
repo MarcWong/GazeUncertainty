@@ -1,0 +1,6 @@
+scatter, bar: Ttest_indResult(statistic=0.911343664536682, pvalue=0.37435563470494926)
+scatter, pie: Ttest_indResult(statistic=1.114764022183003, pvalue=0.28263467345088644)
+scatter, line: Ttest_indResult(statistic=0.8015838215590997, pvalue=0.4337000903062628)
+bar, pie: Ttest_indResult(statistic=0.0865904345599757, pvalue=0.9320689445807193)
+bar, line: Ttest_indResult(statistic=0.04065356743570396, pvalue=0.9680676632733657)
+pie, line: Ttest_indResult(statistic=-0.022436206202948724, pvalue=0.9824373267265346)
