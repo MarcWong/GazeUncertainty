@@ -147,7 +147,7 @@ if __name__ == '__main__':
     
 
     df_img_group = pd.read_csv(
-        'dataset/image_group.csv')
+        'dataset/image_annotation.csv')
 
 
     cleaned_dir = os.path.join(os.path.dirname(args['element_labels_dir']), f'element_labels_enlarged_{ENLARGE_PX}')

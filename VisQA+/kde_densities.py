@@ -128,7 +128,7 @@ def densities_of_vis(vis_path, out_dir, im, element_labels, show_density_overlay
     df_img_excluded = pd.read_csv(
         'dataset/excluded.csv')
     df_img_group = pd.read_csv(
-        'dataset/image_group.csv')
+        'dataset/image_annotation.csv')
 
     groupID = df_img_group[df_img_group['image'] == imgname].group.to_numpy()
     scale_factor = compute_scale_factor(im, groupID[0])

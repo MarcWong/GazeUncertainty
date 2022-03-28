@@ -93,7 +93,7 @@ if __name__ == '__main__':
     df_img_excluded = pd.read_csv(
         'dataset/excluded.csv')
     df_img_group = pd.read_csv(
-        'dataset/image_group.csv')
+        'dataset/image_annotation.csv')
 
     subject_id = os.path.basename(args['fix_file']).strip('.csv')
 
