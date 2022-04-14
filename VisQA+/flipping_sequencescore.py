@@ -88,7 +88,7 @@ def SS_of_vis(densities_dir, flipping_threshold, target_ranks):
 
 
 def type_analysis(args, vis_types, fc_threshold):
-    fig, ax = plt.subplots(nrows=1, ncols=2)
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 7))
     type2rate = {vt: [] for vt in vis_types}
     type2ratebad = {vt: [] for vt in vis_types}
 
