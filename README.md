@@ -1,8 +1,9 @@
 # Impact of Gaze Uncertainty on AOIs in Information Visualisations
 
-*Collaboration project of Maurice and Yao*
+*Yao Wang, Maurice Koch, Mihai Bâce, Daniel Weiskopf, and Andreas Bulling*
 
-accepted by ETVIS 2022 (ETRA Workshop)
+accepted by ACM ETRA's Workshop on Eye Tracking and Visualization (ETVIS 2022)
 
-- this repo contains the toolbox to quantify the gaze uncertainty on infovis
-- [Manuscript](https://git.hcics.simtech.uni-stuttgart.de/submissions/etvis2022_yao)
+This repo contains the toolbox to quantify the gaze uncertainty on infovis.
+
+- As for the Manuscript, please refer to [Manuscript](https://git.hcics.simtech.uni-stuttgart.de/submissions/etvis2022_yao)
