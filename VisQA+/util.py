@@ -100,3 +100,10 @@ def nw_matching(pred_string, gt_string, gap=0.0):
             F[i, j] = np.max([match, delete, insert])
     score = F[len(pred_string), len(gt_string)]
     return score / max(len(pred_string), len(gt_string))
+
+def transparent_cmap(cmap, N=255):
+    "Copy colormap and set alpha values"
+    mycmap = cmap
+    mycmap._init()
+    mycmap._lut[:,-1] = np.linspace(0, 0.8, N+4)
+    return mycmap
