@@ -110,7 +110,7 @@ def shrink_polygon(polygon: np.array, L, imgsize, fixWidth=False):
     return np.asarray(shrinked_polygon)
 
 def enlargeAOI(element_labels, groupID, im, enlargeL:float):
-    scale_factor = compute_scale_factor(im, groupID)    
+    scale_factor = compute_scale_factor(im, groupID)
     realEnlargeL = enlargeL / scale_factor
     #print(im.size, realEnlargeL)
 

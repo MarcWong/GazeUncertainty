@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import os.path
 import os
 import argparse
-import pandas as pd
 
 from sklearn.neighbors import KernelDensity
 from PIL import Image
